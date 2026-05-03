@@ -1,0 +1,5 @@
+@import "tailwindcss";
+:root {
+  --ember-gold: #d4a017;
+  --ember-gold-soft: #f4d27a;
+}
