@@ -32,7 +32,7 @@ export default function ProjectPage() {
     {
       role: "assistant",
       content:
-        "Ember is ready. Choose a project type and output mode, then tell me what you want to build.",
+        "Embr is ready. Choose a project type and output mode, then tell me what you want to build.",
     },
   ]);
 
@@ -78,7 +78,7 @@ export default function ProjectPage() {
         ...prev,
         {
           role: "assistant",
-          content: "Ember hit an error while generating a response.",
+          content: "Embr hit an error while generating a response.",
         },
       ]);
     } finally {
@@ -91,7 +91,7 @@ export default function ProjectPage() {
       <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="md:col-span-1 border border-slate-800 rounded-xl p-4 bg-slate-900">
           <h1 className="text-2xl font-bold mb-4 text-yellow-400">
-            Ember Workspace
+            Embr Workspace
           </h1>
 
           <div className="text-sm text-slate-400 mb-2">Project Type</div>
@@ -183,7 +183,7 @@ export default function ProjectPage() {
 
             {loading && (
               <div className="mr-auto max-w-[80%] rounded-2xl bg-slate-800 border border-yellow-500 px-4 py-3 text-slate-100">
-                Ember is thinking...
+                Embr is thinking...
               </div>
             )}
           </div>
@@ -196,7 +196,7 @@ export default function ProjectPage() {
                 if (e.key === "Enter") sendMessage();
               }}
               className="flex-1 p-3 rounded-lg bg-slate-800 border border-slate-700 outline-none"
-              placeholder="Ask Ember to build something..."
+              placeholder="Ask Embr to build something..."
             />
             <button
               type="button"

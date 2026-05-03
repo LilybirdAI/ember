@@ -6,7 +6,7 @@ import { supabaseBrowser } from "@/lib/supabaseBrowser";
 
 export default function AuthCallbackPage() {
   const router = useRouter();
-  const [message, setMessage] = useState("Confirming your Ember account...");
+  const [message, setMessage] = useState("Confirming your Embr account...");
 
   useEffect(() => {
     async function handleCallback() {
@@ -43,7 +43,7 @@ export default function AuthCallbackPage() {
   return (
     <main className="min-h-screen bg-slate-950 text-white p-6 flex items-center justify-center">
       <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6 max-w-md w-full text-center">
-        <h1 className="text-3xl font-bold text-yellow-400 mb-3">Ember</h1>
+        <h1 className="text-3xl font-bold text-yellow-400 mb-3">Embr</h1>
         <p className="text-slate-300">{message}</p>
       </div>
     </main>

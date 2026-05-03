@@ -258,7 +258,7 @@ export default function MemoryPage() {
     return (
       <main className="min-h-screen bg-slate-950 text-white p-6 flex items-center justify-center">
         <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6 text-center">
-          <h1 className="text-3xl font-bold text-yellow-400 mb-2">Ember</h1>
+          <h1 className="text-3xl font-bold text-yellow-400 mb-2">Embr</h1>
           <p className="text-slate-400">Loading memory manager...</p>
         </div>
       </main>
@@ -271,15 +271,15 @@ export default function MemoryPage() {
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
           <div>
             <a href="/" className="text-sm text-yellow-400 hover:text-yellow-300">
-              ← Back to Ember
+              ← Back to Embr
             </a>
 
             <h1 className="text-4xl font-bold mt-4 text-yellow-400">
-              Ember Memory Manager
+              Embr Memory Manager
             </h1>
 
             <p className="text-slate-400 mt-2">
-              View, add, edit, and delete what Ember remembers.
+              View, add, edit, and delete what Embr remembrs.
             </p>
 
             <p className="text-xs text-slate-500 mt-2">

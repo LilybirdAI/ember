@@ -116,7 +116,7 @@ function fileToDataUrl(file: File): Promise<string> {
 
 function getFriendlyErrorMessage(error: unknown) {
   if (!(error instanceof Error)) {
-    return "Ember hit an unexpected error. Try again.";
+    return "Embr hit an unexpected error. Try again.";
   }
 
   const message = error.message;
@@ -135,21 +135,21 @@ function getFriendlyErrorMessage(error: unknown) {
   }
 
   if (lower.includes("non-json")) {
-    return "Ember’s server returned an invalid response. Check the terminal logs.";
+    return "Embr’s server returned an invalid response. Check the terminal logs.";
   }
 
   if (lower.includes("image")) {
-    return "Ember had trouble reading that image. Try a smaller PNG, JPEG, or WebP.";
+    return "Embr had trouble reading that image. Try a smaller PNG, JPEG, or WebP.";
   }
 
   if (lower.includes("api error")) {
-    return "Ember’s API hit an error. Check the terminal logs and try again.";
+    return "Embr’s API hit an error. Check the terminal logs and try again.";
   }
 
-  return message || "Ember hit an error. Try again.";
+  return message || "Embr hit an error. Try again.";
 }
 
-export default function EmberPage() {
+export default function EmbrPage() {
   const router = useRouter();
   const chatScrollRef = useRef<HTMLDivElement | null>(null);
 
@@ -182,7 +182,7 @@ export default function EmberPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       role: "assistant",
-      content: "Ember is ready. Tell me what you want to build.",
+      content: "Embr is ready. Tell me what you want to build.",
     },
   ]);
 
@@ -499,7 +499,7 @@ export default function EmberPage() {
         ...prev,
         {
           role: "assistant",
-          content: "Ember could not load that conversation.",
+          content: "Embr could not load that conversation.",
         },
       ]);
     } finally {
@@ -662,7 +662,7 @@ export default function EmberPage() {
     return (
       <main className="min-h-screen bg-slate-950 text-white p-6 flex items-center justify-center">
         <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6 text-center">
-          <h1 className="text-3xl font-bold text-yellow-400 mb-2">Ember</h1>
+          <h1 className="text-3xl font-bold text-yellow-400 mb-2">Embr</h1>
           <p className="text-slate-400">Loading your workspace...</p>
         </div>
       </main>
@@ -673,7 +673,7 @@ export default function EmberPage() {
     <main className="min-h-screen bg-slate-950 text-white p-4 xl:p-6">
       <div className="mx-auto grid max-w-[1600px] grid-cols-1 gap-4 xl:h-[88vh] xl:grid-cols-[300px_minmax(0,1fr)]">
         <aside className="rounded-xl border border-slate-800 bg-slate-900 p-4 xl:h-full xl:overflow-y-auto">
-          <h1 className="text-2xl font-bold text-yellow-400">Ember</h1>
+          <h1 className="text-2xl font-bold text-yellow-400">Embr</h1>
 
           <div className="mt-1 truncate text-xs text-slate-500">
             {userEmail}
@@ -997,7 +997,7 @@ export default function EmberPage() {
 
             {loading && (
               <div className="mr-auto max-w-[85%] rounded-2xl border border-yellow-500 bg-slate-800 px-4 py-3 text-slate-100">
-                Ember is thinking...
+                Embr is thinking...
               </div>
             )}
           </div>
@@ -1069,8 +1069,8 @@ export default function EmberPage() {
                 className="flex-1 rounded-lg border border-slate-700 bg-slate-800 p-3 outline-none"
                 placeholder={
                   activeProject
-                    ? `Ask Ember about ${activeProject.name} or upload photos...`
-                    : "Type a message or upload photos — Ember will infer the next step..."
+                    ? `Ask Embr about ${activeProject.name} or upload photos...`
+                    : "Type a message or upload photos — Embr will infer the next step..."
                 }
               />
 

@@ -56,13 +56,13 @@ export default function LoginPage() {
     <main className="min-h-screen bg-slate-950 text-white p-6 flex items-center justify-center">
       <div className="w-full max-w-md rounded-2xl border border-slate-800 bg-slate-900 p-6">
         <h1 className="text-3xl font-bold text-yellow-400 mb-2">
-          Ember
+          Embr
         </h1>
 
         <p className="text-slate-400 mb-6">
           {mode === "login"
-            ? "Log in to your Ember workspace."
-            : "Create your Ember account."}
+            ? "Log in to your Embr workspace."
+            : "Create your Embr account."}
         </p>
 
         <div className="space-y-3">

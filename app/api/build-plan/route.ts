@@ -8,7 +8,7 @@ import {
 } from "@/lib/api";
 import { getHeavyModel } from "@/lib/aiConfig";
 import { getUserFromRequest, isAuthError } from "@/lib/authServer";
-import { getEmberProductState } from "@/lib/emberProductState";
+import { getEmbrProductState } from "@/lib/embrProductState";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { checkMonthlyUsageLimit, logUsageEvent } from "@/lib/usage";
 
@@ -77,7 +77,7 @@ export async function POST(req: Request) {
   try {
     if (!process.env.OPENAI_API_KEY) {
       return apiServerError("Missing OpenAI API key.", {
-        output: "Ember is missing an OPENAI_API_KEY.",
+        output: "Embr is missing an OPENAI_API_KEY.",
       });
     }
 
@@ -88,7 +88,7 @@ export async function POST(req: Request) {
     if (!usageStatus.allowed) {
       return apiTooManyRequests("Monthly usage limit reached.", {
         output:
-          "You’ve reached your monthly Ember usage limit. Upgrade or wait until your usage resets.",
+          "You’ve reached your monthly Embr usage limit. Upgrade or wait until your usage resets.",
         used: usageStatus.used,
         limit: usageStatus.limit,
         remaining: usageStatus.remaining,
@@ -103,7 +103,7 @@ export async function POST(req: Request) {
 
     if (!prompt) {
       return apiBadRequest("Build prompt is required.", {
-        output: "Tell Ember what app you want to build.",
+        output: "Tell Embr what app you want to build.",
       });
     }
 
@@ -111,7 +111,7 @@ export async function POST(req: Request) {
     const model = getHeavyModel();
 
     const instructions = `
-You are Ember's App Builder Core.
+You are Embr's App Builder Core.
 
 Your job is to turn a raw app idea into a structured build plan.
 
@@ -184,7 +184,7 @@ Rules:
 - Protect against scope creep.
 - Think like a builder, not a generic assistant.
 
-${getEmberProductState()}
+${getEmbrProductState()}
 `;
 
     const responseOptions: any = {
@@ -245,7 +245,7 @@ ${prompt}
     }
 
     return apiServerError("Could not generate build plan.", {
-      output: "Ember could not generate a build plan. Check the terminal logs.",
+      output: "Embr could not generate a build plan. Check the terminal logs.",
     });
   }
 }

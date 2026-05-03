@@ -123,7 +123,7 @@ export default function GeneratedAppsPage() {
 
   async function generateApp() {
     if (!prompt.trim()) {
-      alert("Describe the app you want Ember to create.");
+      alert("Describe the app you want Embr to create.");
       return;
     }
 
@@ -201,7 +201,7 @@ export default function GeneratedAppsPage() {
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
             <a href="/" className="text-sm text-yellow-400 hover:text-yellow-300">
-              ← Back to Ember
+              ← Back to Embr
             </a>
 
             <h1 className="mt-3 text-4xl font-bold text-yellow-400">
@@ -209,7 +209,7 @@ export default function GeneratedAppsPage() {
             </h1>
 
             <p className="mt-2 max-w-2xl text-slate-400">
-              Create app starters from prompts. Ember saves the files, organizes the project, and creates a preview when possible.
+              Create app starters from prompts. Embr saves the files, organizes the project, and creates a preview when possible.
             </p>
           </div>
 

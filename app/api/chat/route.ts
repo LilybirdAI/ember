@@ -2,7 +2,7 @@ import OpenAI from "openai";
 import { apiBadRequest, apiNotFound, apiOk, apiServerError, apiTooManyRequests, apiUnauthorized } from "@/lib/api";
 import { getUserFromRequest, isAuthError } from "@/lib/authServer";
 import { getMaxOutputTokens, getReasoningEffort, getTextModel, normalizeAiMode } from "@/lib/aiConfig";
-import { getEmberProductState } from "@/lib/emberProductState";
+import { getEmbrProductState } from "@/lib/embrProductState";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { checkMonthlyUsageLimit, logUsageEvent } from "@/lib/usage";
 
@@ -37,7 +37,7 @@ function getProjectType(value: unknown): ProjectType {
 
 function getSystemPrompt(projectType: ProjectType) {
   const basePrompt = `
-You are Ember, Matt's direct, supportive AI assistant.
+You are Embr, Matt's direct, supportive AI assistant.
 
 You help Matt build apps, websites, MVPs, client projects, business systems, and personal structure.
 
@@ -262,8 +262,8 @@ function validateImageDataUrls(value: unknown) {
 export async function POST(req: Request) {
   try {
     if (!process.env.OPENAI_API_KEY) {
-      return apiServerError("Ember is missing an OpenAI API key.", {
-        output: "Ember is missing an OPENAI_API_KEY. Add it to .env.local and restart the dev server.",
+      return apiServerError("Embr is missing an OpenAI API key.", {
+        output: "Embr is missing an OPENAI_API_KEY. Add it to .env.local and restart the dev server.",
       });
     }
 
@@ -274,7 +274,7 @@ export async function POST(req: Request) {
     if (!usageStatus.allowed) {
       return apiTooManyRequests("Monthly usage limit reached.", {
         output:
-          "You’ve reached your monthly Ember usage limit. Upgrade or wait until your usage resets.",
+          "You’ve reached your monthly Embr usage limit. Upgrade or wait until your usage resets.",
         used: usageStatus.used,
         limit: usageStatus.limit,
         remaining: usageStatus.remaining,
@@ -298,7 +298,7 @@ export async function POST(req: Request) {
     } catch (error) {
       return apiBadRequest("Invalid image upload.", {
         output:
-          "Ember had trouble reading those images. Try PNG/JPEG/WebP files, up to 10MB each and 4 photos max.",
+          "Embr had trouble reading those images. Try PNG/JPEG/WebP files, up to 10MB each and 4 photos max.",
       });
     }
 
@@ -307,7 +307,7 @@ export async function POST(req: Request) {
 
     if (!latestMessage && !hasImage) {
       return apiBadRequest("Message or image is required.", {
-        output: "Send Ember a message or upload an image first.",
+        output: "Send Embr a message or upload an image first.",
       });
     }
 
@@ -454,10 +454,10 @@ Last Updated: ${project.updated_at || "Unknown"}
       throw userMessageError;
     }
 
-    const rememberPrefix = "remember this:";
+    const remembrPrefix = "remembr this:";
 
-    if (latestMessage.toLowerCase().startsWith(rememberPrefix)) {
-      const memoryContent = latestMessage.slice(rememberPrefix.length).trim();
+    if (latestMessage.toLowerCase().startsWith(remembrPrefix)) {
+      const memoryContent = latestMessage.slice(remembrPrefix.length).trim();
 
       if (memoryContent.length > 0) {
         const { error: memoryInsertError } = await supabaseAdmin
@@ -476,8 +476,8 @@ Last Updated: ${project.updated_at || "Unknown"}
         }
 
         const assistantOutput = activeProjectId
-          ? `I remembered that for this project: ${memoryContent}`
-          : `I remembered that: ${memoryContent}`;
+          ? `I remembred that for this project: ${memoryContent}`
+          : `I remembred that: ${memoryContent}`;
 
         const { error: assistantMessageError } = await supabaseAdmin
           .from("messages")
@@ -522,7 +522,7 @@ Last Updated: ${project.updated_at || "Unknown"}
     const conversationText = [...(recentMessages || [])]
       .reverse()
       .map((message) => {
-        const speaker = message.role === "user" ? "Matt" : "Ember";
+        const speaker = message.role === "user" ? "Matt" : "Embr";
         return `${speaker}: ${message.content}`;
       })
       .join("\n\n");
@@ -644,7 +644,7 @@ Infer the most useful action from the image type or image set:
 - Document/form screenshot: summarize what matters and identify the next action.
 - General photo: describe the relevant details and provide practical guidance.
 
-Always respond like Ember: direct, builder-focused, useful, and specific. If no written instruction is provided, default to: "Here is what I see, what it means, and what I would do next."`,
+Always respond like Embr: direct, builder-focused, useful, and specific. If no written instruction is provided, default to: "Here is what I see, what it means, and what I would do next."`,
               },
               ...uploadedImages.map((imageDataUrl) => ({
                 type: "input_image" as const,
@@ -660,13 +660,13 @@ Always respond like Ember: direct, builder-focused, useful, and specific. If no 
 
 ${projectContext}
 
-${getEmberProductState()}
+${getEmbrProductState()}
 
 Structured context and memory:
 ${memoryBlock}
 
 CORE BEHAVIOR CONTRACT:
-You are Ember, a memory-powered AI builder workspace.
+You are Embr, a memory-powered AI builder workspace.
 
 Your job is not just to answer. Your job is to help the user move work forward.
 
@@ -677,7 +677,7 @@ Always optimize for:
 - clean code
 - strong decisions
 - project continuity
-- remembering relevant context without forcing it
+- remembring relevant context without forcing it
 
 When the user asks for code:
 - give the exact file path when possible
@@ -709,8 +709,8 @@ When an active project exists:
 
 Memory rules:
 - Use saved memory only when it genuinely helps.
-- Do not mention memory unless the user asks what you remember or it directly improves the answer.
-- Never pretend to remember something that is not in the provided memory/context.
+- Do not mention memory unless the user asks what you remembr or it directly improves the answer.
+- Never pretend to remembr something that is not in the provided memory/context.
 - Separate global user context from active project context.
 
 Response style:
@@ -812,13 +812,13 @@ Do not be agreeable by default. If the user is wrong, unclear, rushing, underpri
 
     if (message.toLowerCase().includes("image")) {
       return apiServerError("Image interpretation failed.", {
-        output: "Ember had trouble reading that image. Try a smaller PNG or JPEG.",
+        output: "Embr had trouble reading that image. Try a smaller PNG or JPEG.",
       });
     }
 
     return apiServerError("Chat response failed.", {
       output:
-        "Ember hit a server error while generating a response. Check the terminal logs.",
+        "Embr hit a server error while generating a response. Check the terminal logs.",
     });
   }
 }

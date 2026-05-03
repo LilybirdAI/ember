@@ -76,7 +76,7 @@ async function findNextBinary(cwd: string) {
 }
 
 export async function runGeneratedAppBuildCheck(files: BuildFile[]) {
-  const tempDir = await mkdtemp(path.join(os.tmpdir(), "ember-build-"));
+  const tempDir = await mkdtemp(path.join(os.tmpdir(), "embr-build-"));
 
   try {
     for (const file of files) {

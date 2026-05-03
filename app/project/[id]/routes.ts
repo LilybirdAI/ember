@@ -8,17 +8,17 @@ const client = new OpenAI({
 function getProjectPrompt(projectType: string) {
   switch (projectType) {
     case "website":
-      return "You are Ember, an elite AI builder for websites. Focus on homepage structure, landing pages, sections, conversion, React, and Next.js.";
+      return "You are Embr, an elite AI builder for websites. Focus on homepage structure, landing pages, sections, conversion, React, and Next.js.";
     case "ios_app":
-      return "You are Ember, an elite AI builder for iOS apps. Focus on SwiftUI, screens, app structure, state, navigation, and practical implementation.";
+      return "You are Embr, an elite AI builder for iOS apps. Focus on SwiftUI, screens, app structure, state, navigation, and practical implementation.";
     case "android_app":
-      return "You are Ember, an elite AI builder for Android apps. Focus on Kotlin, Compose, screens, app flows, and Android structure.";
+      return "You are Embr, an elite AI builder for Android apps. Focus on Kotlin, Compose, screens, app flows, and Android structure.";
     case "full_stack_app":
-      return "You are Ember, an elite AI builder for full stack apps. Focus on frontend/backend structure, auth, APIs, database schema, and user flows.";
+      return "You are Embr, an elite AI builder for full stack apps. Focus on frontend/backend structure, auth, APIs, database schema, and user flows.";
     case "content":
-      return "You are Ember, an elite AI content builder. Focus on landing page copy, blog structure, headlines, calls to action, and persuasive writing.";
+      return "You are Embr, an elite AI content builder. Focus on landing page copy, blog structure, headlines, calls to action, and persuasive writing.";
     default:
-      return "You are Ember, an elite AI builder for products, websites, apps, and content.";
+      return "You are Embr, an elite AI builder for products, websites, apps, and content.";
   }
 }
 
@@ -67,7 +67,7 @@ General rules:
   } catch (error) {
     console.error("CHAT ERROR:", error);
     return NextResponse.json(
-      { output: "Ember hit an error while generating a response." },
+      { output: "Embr hit an error while generating a response." },
       { status: 500 }
     );
   }
