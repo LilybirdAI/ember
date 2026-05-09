@@ -9,6 +9,7 @@ import { checkMonthlyUsageLimit, logUsageEvent } from "@/lib/usage";
 import { readBusinessOperator } from "@/lib/businessOperator";
 import { chooseEmbrSkill } from "@/lib/embrSkills";
 import { readEmbrDomain } from "@/lib/embrDomains";
+import { routeEmbrKnowledge } from "@/lib/embrKnowledgeRouter";
 import { createLearningMemoryCandidate } from "@/lib/embrLearningMemory";
 import { runEmbrEngines, buildFinalEmbrInstruction } from "@/lib/embrEngineRunner";
 import { arbitrateEngineResults } from "@/lib/embrEngineArbiter";
@@ -802,6 +803,7 @@ Do not be agreeable by default. If the user is wrong, unclear, rushing, underpri
     const businessOperatorRead = readBusinessOperator(latestMessage || "");
     const embrSkill = chooseEmbrSkill(latestMessage || "");
     const embrDomain = readEmbrDomain(latestMessage || "");
+    const embrKnowledge = routeEmbrKnowledge(latestMessage || "");
 
     const arbiterDecision = arbitrateEngineResults({
       userMessage: latestMessage || "",
