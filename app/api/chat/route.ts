@@ -9,6 +9,7 @@ import { checkMonthlyUsageLimit, logUsageEvent } from "@/lib/usage";
 import { readBusinessOperator } from "@/lib/businessOperator";
 import { chooseEmbrSkill } from "@/lib/embrSkills";
 import { readEmbrDomain } from "@/lib/embrDomains";
+import { createLearningMemoryCandidate } from "@/lib/embrLearningMemory";
 import { runEmbrEngines, buildFinalEmbrInstruction } from "@/lib/embrEngineRunner";
 import { arbitrateEngineResults } from "@/lib/embrEngineArbiter";
 
@@ -862,6 +863,17 @@ Domain cautions: ${embrDomain.cautions.join("; ")}`,
     });
 
     output = finalResponse.output_text || output;
+
+    const learningMemory = createLearningMemoryCandidate({
+      userMessage: latestMessage || "",
+      finalAnswer: output,
+      strongestEngine: typeof arbiterDecision !== "undefined" ? arbiterDecision.strongestEngine : undefined,
+      primarySkill: typeof embrSkill !== "undefined" ? embrSkill.primarySkill : undefined,
+      primaryDomain: typeof embrDomain !== "undefined" ? embrDomain.primaryDomain : undefined,
+      primaryKnowledgeNeed: typeof embrKnowledge !== "undefined" ? embrKnowledge.primaryNeed : undefined,
+    });
+
+    console.log("EMBR LEARNING MEMORY CANDIDATE:", learningMemory);
 
     try {
       await logUsageEvent({
