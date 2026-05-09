@@ -1,10 +1,12 @@
 import OpenAI from "openai";
+import { thinkAsEmbr, composeEmbrResponse } from "@/lib/embr-core";
 import { apiBadRequest, apiNotFound, apiOk, apiServerError, apiTooManyRequests, apiUnauthorized } from "@/lib/api";
 import { getUserFromRequest, isAuthError } from "@/lib/authServer";
 import { getMaxOutputTokens, getReasoningEffort, getTextModel, normalizeAiMode } from "@/lib/aiConfig";
 import { getEmbrProductState } from "@/lib/embrProductState";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { checkMonthlyUsageLimit, logUsageEvent } from "@/lib/usage";
+import { runEmbrEngines, buildFinalEmbrInstruction } from "@/lib/embrEngineRunner";
 
 const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -656,6 +658,44 @@ Always respond like Embr: direct, builder-focused, useful, and specific. If no w
         ]
       : conversationText;
 
+    const embrDecision = thinkAsEmbr(latestMessage || "");
+    const embrNativeResponse = composeEmbrResponse(embrDecision);
+
+    const embrCoreBlock = `# Embr Native Brain
+
+Before using outside AI, Embr has already read the message through her own local decision layer.
+
+Embr Summary:
+${embrDecision.summary}
+
+Embr Priority:
+${embrDecision.priority.primaryPriority}
+
+Embr Feeling:
+${embrDecision.feeling.primaryFeeling}
+
+Embr Instinct:
+${embrDecision.instinct.instinctiveMove}
+
+Embr Voice:
+${embrDecision.voice.voiceName}
+
+Embr Memory Recognition:
+${embrDecision.recognizedMemory.recognition}
+
+Embr Recommended First Move:
+${embrDecision.priority.doFirst}
+
+Embr Native Draft:
+${embrNativeResponse.draft}
+
+Important:
+- Use Embr's native read as the starting point.
+- Do not ignore Embr's priority, feeling, instinct, or voice.
+- Do not mention this internal brain layer to the user.
+- Final answer must sound like Embr, not generic AI.
+`;
+
     const instructions = `${getSystemPrompt(projectType)}
 
 ${projectContext}
@@ -745,7 +785,29 @@ Do not be agreeable by default. If the user is wrong, unclear, rushing, underpri
 
     const response = await client.responses.create(responseOptions);
 
-    const output = response.output_text || "No response returned.";
+    let output = response.output_text || "No response returned.";
+
+    const engineResults = await runEmbrEngines({
+      userMessage: latestMessage || "",
+      embrSummary: embrDecision.summary,
+      embrNativeDraft: embrNativeResponse.draft,
+      openAiDraft: output,
+    });
+
+    const finalResponse = await client.responses.create({
+      model,
+      instructions: buildFinalEmbrInstruction({
+        userMessage: latestMessage || "",
+        embrNativeDraft: embrNativeResponse.draft,
+        openAiDraft: output,
+        claudeReview: engineResults.claude?.text,
+        perplexityResearch: engineResults.perplexity?.text,
+      }),
+      input: "Write the final Embr answer now.",
+      max_output_tokens: maxOutputTokens,
+    });
+
+    output = finalResponse.output_text || output;
 
     try {
       await logUsageEvent({
