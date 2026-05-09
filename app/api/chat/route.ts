@@ -6,6 +6,7 @@ import { getMaxOutputTokens, getReasoningEffort, getTextModel, normalizeAiMode }
 import { getEmbrProductState } from "@/lib/embrProductState";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { checkMonthlyUsageLimit, logUsageEvent } from "@/lib/usage";
+import { readBusinessOperator } from "@/lib/businessOperator";
 import { runEmbrEngines, buildFinalEmbrInstruction } from "@/lib/embrEngineRunner";
 
 const client = new OpenAI({
