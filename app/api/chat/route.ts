@@ -8,7 +8,9 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { checkMonthlyUsageLimit, logUsageEvent } from "@/lib/usage";
 import { readBusinessOperator } from "@/lib/businessOperator";
 import { chooseEmbrSkill } from "@/lib/embrSkills";
+import { readEmbrDomain } from "@/lib/embrDomains";
 import { runEmbrEngines, buildFinalEmbrInstruction } from "@/lib/embrEngineRunner";
+import { arbitrateEngineResults } from "@/lib/embrEngineArbiter";
 
 const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -798,15 +800,62 @@ Do not be agreeable by default. If the user is wrong, unclear, rushing, underpri
 
     const businessOperatorRead = readBusinessOperator(latestMessage || "");
     const embrSkill = chooseEmbrSkill(latestMessage || "");
+    const embrDomain = readEmbrDomain(latestMessage || "");
+
+    const arbiterDecision = arbitrateEngineResults({
+      userMessage: latestMessage || "",
+      embrNativeDraft: embrNativeResponse.draft,
+      engineResults,
+    });
 
     const finalResponse = await client.responses.create({
       model,
       instructions: buildFinalEmbrInstruction({
         userMessage: latestMessage || "",
-        embrNativeDraft: embrNativeResponse.draft,
+        embrNativeDraft: `${embrNativeResponse.draft}
+
+Embr arbiter guidance:
+${arbiterDecision.finalGuidance}
+
+Accepted engine signals:
+${arbiterDecision.acceptedSignals.join("\n")}
+
+Rejected engine signals:
+${arbiterDecision.rejectedSignals.join("\n")}
+
+Strongest engine this turn:
+${arbiterDecision.strongestEngine}
+
+Business operator read:
+${businessOperatorRead.isBusinessQuestion ? `
+Mode: ${businessOperatorRead.businessMode}
+Real move: ${businessOperatorRead.realMove}
+Too early: ${businessOperatorRead.tooEarly.join("; ")}
+Risks: ${businessOperatorRead.risks.join("; ")}
+Proof needed: ${businessOperatorRead.proofNeeded.join("; ")}
+Next step: ${businessOperatorRead.nextStep}
+` : "No specific business operator issue detected."}
+
+Embr skill selected:
+Primary skill: ${embrSkill.primarySkill}
+Secondary skills: ${embrSkill.secondarySkills.join(", ") || "none"}
+Why this skill: ${embrSkill.whyThisSkill}
+Output goal: ${embrSkill.outputGoal}
+Must include: ${embrSkill.mustInclude.join("; ")}
+Must avoid: ${embrSkill.mustAvoid.join("; ")}
+
+Embr domain read:
+Primary domain: ${embrDomain.primaryDomain}
+Secondary domains: ${embrDomain.secondaryDomains.join(", ") || "none"}
+Needs current info: ${embrDomain.needsCurrentInfo}
+Preferred engine: ${embrDomain.preferredEngine}
+Domain goal: ${embrDomain.domainGoal}
+Answer style: ${embrDomain.answerStyle}
+Domain cautions: ${embrDomain.cautions.join("; ")}`,
         openAiDraft: output,
         claudeReview: engineResults.claude?.text,
         perplexityResearch: engineResults.perplexity?.text,
+        grokChallenge: engineResults.grok?.text,
       }),
       input: "Write the final Embr answer now.",
       max_output_tokens: maxOutputTokens,
