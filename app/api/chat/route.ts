@@ -7,6 +7,7 @@ import { getEmbrProductState } from "@/lib/embrProductState";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { checkMonthlyUsageLimit, logUsageEvent } from "@/lib/usage";
 import { readBusinessOperator } from "@/lib/businessOperator";
+import { chooseEmbrSkill } from "@/lib/embrSkills";
 import { runEmbrEngines, buildFinalEmbrInstruction } from "@/lib/embrEngineRunner";
 
 const client = new OpenAI({
@@ -796,6 +797,7 @@ Do not be agreeable by default. If the user is wrong, unclear, rushing, underpri
     });
 
     const businessOperatorRead = readBusinessOperator(latestMessage || "");
+    const embrSkill = chooseEmbrSkill(latestMessage || "");
 
     const finalResponse = await client.responses.create({
       model,
