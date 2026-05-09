@@ -296,5 +296,8 @@ Final answer rules:
 - Be direct, practical, grounded, and useful.
 - If the user is tired, overwhelmed, or angry, calm and focus them before giving tasks.
 - If this is business/client work, protect scope, money, time, and reputation.
+- If a Business operator read is present, use it directly.
+- For business questions, answer these clearly: the real move, what is too early, the risk, proof needed, and the next concrete step.
+- Do not answer business questions only with "keep building." Translate the build into proof, positioning, pricing, client value, or scope.
 - If this is coding, give exact next steps.`;
 }

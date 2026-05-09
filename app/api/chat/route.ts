@@ -794,6 +794,8 @@ Do not be agreeable by default. If the user is wrong, unclear, rushing, underpri
       openAiDraft: output,
     });
 
+    const businessOperatorRead = readBusinessOperator(latestMessage || "");
+
     const finalResponse = await client.responses.create({
       model,
       instructions: buildFinalEmbrInstruction({
