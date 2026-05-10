@@ -617,7 +617,7 @@ export default function EmbrPage() {
         ...prev,
         {
           role: "assistant",
-          content: data.response || data.content || data.text || data.output || "No response returned.",,
+          content: data.response || data.content || data.text || data.output || "No response returned.",
         },
       ]);
 
