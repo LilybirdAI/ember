@@ -456,7 +456,7 @@ Last Updated: ${project.updated_at || "Unknown"}
         user_id: user.id,
         conversation_id: activeConversationId,
         role: "user",
-        life: messageForStorage,
+        content: messageForStorage,
       });
 
     if (userMessageError) {
@@ -466,16 +466,16 @@ Last Updated: ${project.updated_at || "Unknown"}
     const remembrPrefix = "remembr this:";
 
     if (latestMessage.toLowerCase().startsWith(remembrPrefix)) {
-      const memoryLife = latestMessage.slice(remembrPrefix.length).trim();
+      const memoryContent = latestMessage.slice(remembrPrefix.length).trim();
 
-      if (memoryLife.length > 0) {
+      if (memoryContent.length > 0) {
         const { error: memoryInsertError } = await supabaseAdmin
           .from("memories")
           .insert({
             user_id: user.id,
             project_id: activeProjectId,
             category: activeProjectId ? "project" : "manual",
-            life: memoryLife,
+            content: memoryContent,
             importance: 4,
             source: "chat",
           });
@@ -485,8 +485,8 @@ Last Updated: ${project.updated_at || "Unknown"}
         }
 
         const assistantOutput = activeProjectId
-          ? `I remembred that for this project: ${memoryLife}`
-          : `I remembred that: ${memoryLife}`;
+          ? `I remembred that for this project: ${memoryContent}`
+          : `I remembred that: ${memoryContent}`;
 
         const { error: assistantMessageError } = await supabaseAdmin
           .from("messages")
@@ -494,7 +494,7 @@ Last Updated: ${project.updated_at || "Unknown"}
             user_id: user.id,
             conversation_id: activeConversationId,
             role: "assistant",
-            life: assistantOutput,
+            content: assistantOutput,
           });
 
         if (assistantMessageError) {
@@ -935,7 +935,7 @@ Domain cautions: ${embrDomain.cautions.join("; ")}`,
         user_id: user.id,
         conversation_id: activeConversationId,
         role: "assistant",
-        life: output,
+        content: output,
       });
 
     if (assistantMessageError) {
