@@ -6,7 +6,7 @@ import { supabaseBrowser } from "@/lib/supabaseBrowser";
 
 type ChatMessage = {
   role: "user" | "assistant";
-  life: string;
+  content: string;
   imagePreviews?: string[];
 };
 
@@ -182,7 +182,7 @@ export default function EmbrPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       role: "assistant",
-      life: "Embr is ready. Tell me what you need.",
+      content: "Embr is ready. Tell me what you need.",
     },
   ]);
 
@@ -242,7 +242,7 @@ export default function EmbrPage() {
     setMessages([
       {
         role: "assistant",
-        life: project
+        content: project
           ? `New chat started for ${project.name}. What are we building?`
           : "New chat started. Tell me what you need.",
       },
@@ -468,9 +468,9 @@ export default function EmbrPage() {
       }
 
       const loadedMessages: ChatMessage[] = (data.messages || []).map(
-        (message: { role: "user" | "assistant"; life: string }) => ({
+        (message: { role: "user" | "assistant"; content: string }) => ({
           role: message.role,
-          life: message.life,
+          content: message.content,
         })
       );
 
@@ -488,7 +488,7 @@ export default function EmbrPage() {
           : [
               {
                 role: "assistant",
-                life: "This conversation has no messages yet.",
+                content: "This conversation has no messages yet.",
               },
             ]
       );
@@ -499,7 +499,7 @@ export default function EmbrPage() {
         ...prev,
         {
           role: "assistant",
-          life: "Embr could not load that conversation.",
+          content: "Embr could not load that conversation.",
         },
       ]);
     } finally {
@@ -567,7 +567,7 @@ export default function EmbrPage() {
       ...messages,
       {
         role: "user",
-        life: displayLife,
+        content: displayLife,
         imagePreviews: imagePreviewsForMessage,
       },
     ];
@@ -617,7 +617,7 @@ export default function EmbrPage() {
         ...prev,
         {
           role: "assistant",
-          life: data.output || "No response returned.",
+          content: data.output || "No response returned.",
         },
       ]);
 
@@ -631,7 +631,7 @@ export default function EmbrPage() {
         ...prev,
         {
           role: "assistant",
-          life: getFriendlyErrorMessage(error),
+          content: getFriendlyErrorMessage(error),
         },
       ]);
     } finally {
@@ -984,7 +984,7 @@ export default function EmbrPage() {
                 )}
 
                 <div className="whitespace-pre-wrap text-sm leading-6">
-                  {message.life}
+                  {message.content}
                 </div>
               </div>
             ))}

@@ -518,7 +518,7 @@ Last Updated: ${project.updated_at || "Unknown"}
 
     const { data: recentMessages, error: messagesError } = await supabaseAdmin
       .from("messages")
-      .select("role, life, created_at")
+      .select("role, content, created_at")
       .eq("conversation_id", activeConversationId)
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
@@ -532,7 +532,7 @@ Last Updated: ${project.updated_at || "Unknown"}
       .reverse()
       .map((message) => {
         const speaker = message.role === "user" ? "Matt" : "Embr";
-        return `${speaker}: ${message.life}`;
+        return `${speaker}: ${message.content}`;
       })
       .join("\n\n");
 
@@ -552,7 +552,7 @@ Last Updated: ${project.updated_at || "Unknown"}
 
     let projectMemories: {
       category: string;
-      life: string;
+      content: string;
       importance: number;
     }[] = [];
 
@@ -578,7 +578,7 @@ Last Updated: ${project.updated_at || "Unknown"}
         ? globalMemories
             .map(
               (memory) =>
-                `- [${memory.category}] ${memory.life} importance: ${memory.importance}`
+                `- [${memory.category}] ${memory.content} importance: ${memory.importance}`
             )
             .join("\n")
         : "No global memories found.";
@@ -588,7 +588,7 @@ Last Updated: ${project.updated_at || "Unknown"}
         ? projectMemories
             .map(
               (memory) =>
-                `- [${memory.category}] ${memory.life} importance: ${memory.importance}`
+                `- [${memory.category}] ${memory.content} importance: ${memory.importance}`
             )
             .join("\n")
         : activeProjectId
@@ -635,7 +635,7 @@ ${projectMemoryBlock}
       ? [
           {
             role: "user",
-            life: [
+            content: [
               {
                 type: "input_text",
                 text: `${conversationText}
