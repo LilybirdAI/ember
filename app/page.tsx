@@ -182,7 +182,7 @@ export default function EmbrPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       role: "assistant",
-      content: "Embr is ready. Tell me what you want to build.",
+      content: "Embr is ready. Tell me what you need.",
     },
   ]);
 
@@ -244,7 +244,7 @@ export default function EmbrPage() {
         role: "assistant",
         content: project
           ? `New chat started for ${project.name}. What are we building?`
-          : "New chat started. Tell me what you want to build.",
+          : "New chat started. Tell me what you need.",
       },
     ]);
   }
@@ -679,13 +679,6 @@ export default function EmbrPage() {
             {userEmail}
           </div>
 
-          <a
-            href="/generated-apps"
-            className="mt-4 block rounded-lg border border-yellow-500/40 bg-yellow-500/10 px-3 py-2 text-center text-sm font-semibold text-yellow-400 hover:bg-yellow-500/20"
-          >
-            Generated Apps
-          </a>
-
           <div className="mt-5 space-y-3">
             <div>
               <div className="mb-2 text-xs uppercase tracking-widest text-slate-500">
@@ -939,7 +932,7 @@ export default function EmbrPage() {
         <section className="flex min-h-[70vh] flex-col rounded-xl border border-slate-800 bg-slate-900 p-4 xl:h-full">
           <div className="mb-4 flex items-center justify-between gap-4">
             <div>
-              <div className="text-lg font-semibold">Builder Chat</div>
+              <div className="text-lg font-semibold">Embr Core</div>
 
               <div className="text-xs text-slate-500">
                 {activeProject
