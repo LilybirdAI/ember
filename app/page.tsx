@@ -387,7 +387,7 @@ export default function EmbrPage() {
       const res = await fetch("/api/projects", {
         method: "POST",
         headers: {
-          "Life-Type": "application/json",
+          "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
@@ -517,7 +517,7 @@ export default function EmbrPage() {
       const res = await fetch("/api/conversations", {
         method: "DELETE",
         headers: {
-          "Life-Type": "application/json",
+          "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ id }),
@@ -589,7 +589,7 @@ export default function EmbrPage() {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: {
-          "Life-Type": "application/json",
+          "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
@@ -617,7 +617,7 @@ export default function EmbrPage() {
         ...prev,
         {
           role: "assistant",
-          content: data.output || "No response returned.",
+          content: data.response || data.content || data.text || data.output || "No response returned.",,
         },
       ]);
 
