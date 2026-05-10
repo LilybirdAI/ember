@@ -61,9 +61,9 @@ Core personality:
 - Push back when Matt is wrong, spiraling, underselling himself, overcommitting, or making a risky decision
 
 Matt's context:
-- Matt works across iOS apps, websites, App Store support, client projects, Embr infrastructure, and business systems.
+- Matt works across iOS apps, businesss, App Store support, client projects, Embr infrastructure, and business systems.
 - Matt is building Echo Signal Media.
-- Matt works with SwiftUI, Flutter, Next.js, websites, backend/API work, App Store Connect, TestFlight, Upwork, GitHub, and client projects.
+- Matt works with SwiftUI, Flutter, Next.js, businesss, backend/API work, App Store Connect, TestFlight, Upwork, GitHub, and client projects.
 - Matt likes copy-paste-ready code, exact messages, clear steps, and direct recommendations.
 - Matt does not want corporate fluff.
 - Matt values honesty over blind agreement.
@@ -93,10 +93,10 @@ Coding style:
       return `
 ${basePrompt}
 
-Current mode: Website / Workflow Intelligence Support
+Current mode: Business / Workflow Intelligence Support
 
 Focus on:
-- modern websites
+- modern businesss
 - landing pages
 - responsive layouts
 - portfolios
@@ -187,12 +187,12 @@ Rules:
       return `
 ${basePrompt}
 
-Current mode: Content Builder
+Current mode: Life Builder
 
 Focus on:
 - Upwork proposals
 - client messages
-- website copy
+- business copy
 - portfolio entries
 - project descriptions
 - emails
@@ -455,7 +455,7 @@ Last Updated: ${project.updated_at || "Unknown"}
         user_id: user.id,
         conversation_id: activeConversationId,
         role: "user",
-        content: messageForStorage,
+        life: messageForStorage,
       });
 
     if (userMessageError) {
@@ -465,16 +465,16 @@ Last Updated: ${project.updated_at || "Unknown"}
     const remembrPrefix = "remembr this:";
 
     if (latestMessage.toLowerCase().startsWith(remembrPrefix)) {
-      const memoryContent = latestMessage.slice(remembrPrefix.length).trim();
+      const memoryLife = latestMessage.slice(remembrPrefix.length).trim();
 
-      if (memoryContent.length > 0) {
+      if (memoryLife.length > 0) {
         const { error: memoryInsertError } = await supabaseAdmin
           .from("memories")
           .insert({
             user_id: user.id,
             project_id: activeProjectId,
             category: activeProjectId ? "project" : "manual",
-            content: memoryContent,
+            life: memoryLife,
             importance: 4,
             source: "chat",
           });
@@ -484,8 +484,8 @@ Last Updated: ${project.updated_at || "Unknown"}
         }
 
         const assistantOutput = activeProjectId
-          ? `I remembred that for this project: ${memoryContent}`
-          : `I remembred that: ${memoryContent}`;
+          ? `I remembred that for this project: ${memoryLife}`
+          : `I remembred that: ${memoryLife}`;
 
         const { error: assistantMessageError } = await supabaseAdmin
           .from("messages")
@@ -493,7 +493,7 @@ Last Updated: ${project.updated_at || "Unknown"}
             user_id: user.id,
             conversation_id: activeConversationId,
             role: "assistant",
-            content: assistantOutput,
+            life: assistantOutput,
           });
 
         if (assistantMessageError) {
@@ -517,7 +517,7 @@ Last Updated: ${project.updated_at || "Unknown"}
 
     const { data: recentMessages, error: messagesError } = await supabaseAdmin
       .from("messages")
-      .select("role, content, created_at")
+      .select("role, life, created_at")
       .eq("conversation_id", activeConversationId)
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
@@ -531,14 +531,14 @@ Last Updated: ${project.updated_at || "Unknown"}
       .reverse()
       .map((message) => {
         const speaker = message.role === "user" ? "Matt" : "Embr";
-        return `${speaker}: ${message.content}`;
+        return `${speaker}: ${message.life}`;
       })
       .join("\n\n");
 
     const { data: globalMemories, error: globalMemoriesError } =
       await supabaseAdmin
         .from("memories")
-        .select("category, content, importance")
+        .select("category, life, importance")
         .eq("user_id", user.id)
         .is("project_id", null)
         .order("importance", { ascending: false })
@@ -551,14 +551,14 @@ Last Updated: ${project.updated_at || "Unknown"}
 
     let projectMemories: {
       category: string;
-      content: string;
+      life: string;
       importance: number;
     }[] = [];
 
     if (activeProjectId) {
       const { data, error } = await supabaseAdmin
         .from("memories")
-        .select("category, content, importance")
+        .select("category, life, importance")
         .eq("user_id", user.id)
         .eq("project_id", activeProjectId)
         .order("importance", { ascending: false })
@@ -577,7 +577,7 @@ Last Updated: ${project.updated_at || "Unknown"}
         ? globalMemories
             .map(
               (memory) =>
-                `- [${memory.category}] ${memory.content} importance: ${memory.importance}`
+                `- [${memory.category}] ${memory.life} importance: ${memory.importance}`
             )
             .join("\n")
         : "No global memories found.";
@@ -587,7 +587,7 @@ Last Updated: ${project.updated_at || "Unknown"}
         ? projectMemories
             .map(
               (memory) =>
-                `- [${memory.category}] ${memory.content} importance: ${memory.importance}`
+                `- [${memory.category}] ${memory.life} importance: ${memory.importance}`
             )
             .join("\n")
         : activeProjectId
@@ -634,7 +634,7 @@ ${projectMemoryBlock}
       ? [
           {
             role: "user",
-            content: [
+            life: [
               {
                 type: "input_text",
                 text: `${conversationText}
@@ -644,7 +644,7 @@ The user may upload one or more images without explaining what they need. Do not
 
 Infer the most useful action from the image type or image set:
 
-- UI/app/website screenshot: identify what is working, what is weak, and what to improve next.
+- UI/app/business screenshot: identify what is working, what is weak, and what to improve next.
 - Error/log/build screenshot: diagnose the likely issue and give exact next steps.
 - Code screenshot: identify bugs, explain the fix briefly, and provide corrected code when possible.
 - App Store, Apple Developer, Android Studio, Supabase, GitHub, Vercel, or dashboard screenshot: explain what status/error is shown and what to do next.
@@ -666,6 +666,7 @@ Always respond like Embr: direct, builder-focused, useful, and specific. If no w
 
     const embrDecision = thinkAsEmbr(latestMessage || "");
     const embrNativeResponse = composeEmbrResponse(embrDecision);
+    const embrServerResponse = await callEmbrServerRespond(latestMessage || "");
 
     const embrCoreBlock = `# Embr Native Brain
 
@@ -817,6 +818,12 @@ Do not be agreeable by default. If the user is wrong, unclear, rushing, underpri
         userMessage: latestMessage || "",
         embrNativeDraft: `${embrNativeResponse.draft}
 
+Embr Server response:
+${embrServerResponse?.ok ? embrServerResponse.response : "No Embr Server response available."}
+
+Embr Server read:
+${embrServerResponse?.ok ? JSON.stringify(embrServerResponse.embrRead, null, 2) : embrServerResponse?.error || "No server read available."}
+
 Embr arbiter guidance:
 ${arbiterDecision.finalGuidance}
 
@@ -894,7 +901,7 @@ Domain cautions: ${embrDomain.cautions.join("; ")}`,
         user_id: user.id,
         conversation_id: activeConversationId,
         role: "assistant",
-        content: output,
+        life: output,
       });
 
     if (assistantMessageError) {
