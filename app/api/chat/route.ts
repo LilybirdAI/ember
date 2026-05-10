@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import { callEmbrServerRespond } from "@/lib/embrServerClient";
 import { thinkAsEmbr, composeEmbrResponse } from "@/lib/embr-core";
 import { apiBadRequest, apiNotFound, apiOk, apiServerError, apiTooManyRequests, apiUnauthorized } from "@/lib/api";
 import { getUserFromRequest, isAuthError } from "@/lib/authServer";
