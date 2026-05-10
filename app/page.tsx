@@ -8,6 +8,15 @@ type ChatMessage = {
   role: "user" | "assistant";
   content: string;
   imagePreviews?: string[];
+  engine?: string;
+  model?: string;
+  embrRead?: {
+    domain?: string;
+    skill?: string;
+    priority?: string;
+    voice?: string;
+    nextMove?: string;
+  };
 };
 
 type SelectedImage = {
@@ -618,6 +627,9 @@ export default function EmbrPage() {
         {
           role: "assistant",
           content: data.response || data.content || data.text || data.output || "No response returned.",
+          engine: data.engine,
+          model: data.model,
+          embrRead: data.embrRead,
         },
       ]);
 
@@ -986,6 +998,50 @@ export default function EmbrPage() {
                 <div className="whitespace-pre-wrap text-sm leading-6">
                   {message.content}
                 </div>
+
+                {message.role === "assistant" &&
+                  (message.engine || message.model || message.embrRead) && (
+                    <div className="mt-3 rounded-xl border border-slate-700 bg-slate-900/70 px-3 py-2 text-[11px] leading-5 text-slate-400">
+                      <div className="mb-1 font-semibold uppercase tracking-wide text-yellow-400">
+                        Embr Operator Read
+                      </div>
+
+                      {message.engine && (
+                        <div>
+                          <span className="text-slate-500">Engine:</span>{" "}
+                          {message.engine}
+                        </div>
+                      )}
+
+                      {message.model && (
+                        <div>
+                          <span className="text-slate-500">Model:</span>{" "}
+                          {message.model}
+                        </div>
+                      )}
+
+                      {message.embrRead?.domain && (
+                        <div>
+                          <span className="text-slate-500">Domain:</span>{" "}
+                          {message.embrRead.domain}
+                        </div>
+                      )}
+
+                      {message.embrRead?.priority && (
+                        <div>
+                          <span className="text-slate-500">Priority:</span>{" "}
+                          {message.embrRead.priority}
+                        </div>
+                      )}
+
+                      {message.embrRead?.nextMove && (
+                        <div>
+                          <span className="text-slate-500">Next move:</span>{" "}
+                          {message.embrRead.nextMove}
+                        </div>
+                      )}
+                    </div>
+                  )}
               </div>
             ))}
 
