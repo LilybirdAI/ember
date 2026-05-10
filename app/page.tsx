@@ -758,7 +758,7 @@ export default function EmbrPage() {
                 onClick={() => setShowProjectTools((current) => !current)}
                 className="flex-1 rounded-lg border border-yellow-500/40 bg-yellow-500/10 px-3 py-2 text-sm font-semibold text-yellow-400 hover:bg-yellow-500/20"
               >
-                {showProjectTools ? "Hide Project Tools" : "+ New Project"}
+                {showProjectTools ? "Hide Project Tools" : "+ New Workspace"}
               </button>
 
               <button
