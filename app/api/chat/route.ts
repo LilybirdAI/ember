@@ -665,6 +665,39 @@ Always respond like Embr: direct, builder-focused, useful, and specific. If no w
         ]
       : conversationText;
 
+    const embrServerDirect = await callEmbrServerRespond(latestMessage || "");
+
+    if (embrServerDirect?.ok && embrServerDirect.response) {
+      const output = embrServerDirect.response;
+
+      const { error: assistantMessageError } = await supabaseAdmin
+        .from("messages")
+        .insert({
+          user_id: user.id,
+          conversation_id: activeConversationId,
+          role: "assistant",
+          content: output,
+        });
+
+      if (assistantMessageError) {
+        throw assistantMessageError;
+      }
+
+      await supabaseAdmin
+        .from("conversations")
+        .update({
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", activeConversationId)
+        .eq("user_id", user.id);
+
+      return apiOk({
+        output,
+        conversationId: activeConversationId,
+        source: "embr-server",
+      });
+    }
+
     const embrDecision = thinkAsEmbr(latestMessage || "");
     const embrNativeResponse = composeEmbrResponse(embrDecision);
     const embrServerResponse = await callEmbrServerRespond(latestMessage || "");
