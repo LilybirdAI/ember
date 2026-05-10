@@ -6,7 +6,7 @@ import { supabaseBrowser } from "@/lib/supabaseBrowser";
 
 type ChatMessage = {
   role: "user" | "assistant";
-  content: string;
+  life: string;
   imagePreviews?: string[];
 };
 
@@ -17,11 +17,11 @@ type SelectedImage = {
 };
 
 type ProjectType =
-  | "website"
-  | "ios_app"
-  | "android_app"
-  | "full_stack_app"
-  | "content"
+  | "business"
+  | "technical"
+  | "research"
+  | "writing"
+  | "life"
   | "general";
 
 type AIMode = "auto" | "light" | "heavy";
@@ -53,11 +53,11 @@ type UsageStatus = {
 
 const projectTypes: ProjectType[] = [
   "general",
-  "website",
-  "ios_app",
-  "android_app",
-  "full_stack_app",
-  "content",
+  "business",
+  "technical",
+  "research",
+  "writing",
+  "life",
 ];
 
 function isProjectType(value: unknown): value is ProjectType {
@@ -182,7 +182,7 @@ export default function EmbrPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       role: "assistant",
-      content: "Embr is ready. Tell me what you need.",
+      life: "Embr is ready. Tell me what you need.",
     },
   ]);
 
@@ -242,7 +242,7 @@ export default function EmbrPage() {
     setMessages([
       {
         role: "assistant",
-        content: project
+        life: project
           ? `New chat started for ${project.name}. What are we building?`
           : "New chat started. Tell me what you need.",
       },
@@ -387,7 +387,7 @@ export default function EmbrPage() {
       const res = await fetch("/api/projects", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
+          "Life-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
@@ -468,9 +468,9 @@ export default function EmbrPage() {
       }
 
       const loadedMessages: ChatMessage[] = (data.messages || []).map(
-        (message: { role: "user" | "assistant"; content: string }) => ({
+        (message: { role: "user" | "assistant"; life: string }) => ({
           role: message.role,
-          content: message.content,
+          life: message.life,
         })
       );
 
@@ -488,7 +488,7 @@ export default function EmbrPage() {
           : [
               {
                 role: "assistant",
-                content: "This conversation has no messages yet.",
+                life: "This conversation has no messages yet.",
               },
             ]
       );
@@ -499,7 +499,7 @@ export default function EmbrPage() {
         ...prev,
         {
           role: "assistant",
-          content: "Embr could not load that conversation.",
+          life: "Embr could not load that conversation.",
         },
       ]);
     } finally {
@@ -517,7 +517,7 @@ export default function EmbrPage() {
       const res = await fetch("/api/conversations", {
         method: "DELETE",
         headers: {
-          "Content-Type": "application/json",
+          "Life-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ id }),
@@ -560,14 +560,14 @@ export default function EmbrPage() {
     if ((!input.trim() && selectedImages.length === 0) || loading) return;
 
     const userMessage = input.trim();
-    const displayContent = userMessage || "[Images uploaded]";
+    const displayLife = userMessage || "[Images uploaded]";
     const imagePreviewsForMessage = selectedImages.map((image) => image.preview);
 
     const nextMessages: ChatMessage[] = [
       ...messages,
       {
         role: "user",
-        content: displayContent,
+        life: displayLife,
         imagePreviews: imagePreviewsForMessage,
       },
     ];
@@ -589,7 +589,7 @@ export default function EmbrPage() {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
+          "Life-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
@@ -617,7 +617,7 @@ export default function EmbrPage() {
         ...prev,
         {
           role: "assistant",
-          content: data.output || "No response returned.",
+          life: data.output || "No response returned.",
         },
       ]);
 
@@ -631,7 +631,7 @@ export default function EmbrPage() {
         ...prev,
         {
           role: "assistant",
-          content: getFriendlyErrorMessage(error),
+          life: getFriendlyErrorMessage(error),
         },
       ]);
     } finally {
@@ -715,6 +715,7 @@ export default function EmbrPage() {
               <div className="mb-2 text-xs uppercase tracking-widest text-slate-500">
                 Mode
               </div>
+              <div className="mt-2 text-[10px] text-slate-600">Embr UI v-mode-test</div>
 
               <select
                 value={projectType}
@@ -722,11 +723,11 @@ export default function EmbrPage() {
                 className="w-full rounded-lg border border-slate-700 bg-slate-800 p-3 text-sm outline-none"
               >
                 <option value="general">General</option>
-                <option value="website">Website</option>
-                <option value="ios_app">iOS App</option>
-                <option value="android_app">Android App</option>
-                <option value="full_stack_app">Full Stack App</option>
-                <option value="content">Content</option>
+                <option value="business">Business</option>
+                <option value="technical">Technical</option>
+                <option value="research">Research</option>
+                <option value="writing">Writing</option>
+                <option value="life">Life</option>
               </select>
             </div>
 
@@ -787,11 +788,11 @@ export default function EmbrPage() {
                   className="w-full rounded-lg border border-slate-700 bg-slate-800 p-2 text-sm outline-none"
                 >
                   <option value="general">General</option>
-                  <option value="website">Website</option>
-                  <option value="ios_app">iOS App</option>
-                  <option value="android_app">Android App</option>
-                  <option value="full_stack_app">Full Stack App</option>
-                  <option value="content">Content</option>
+                  <option value="business">Business</option>
+                  <option value="technical">Technical</option>
+                  <option value="research">Research</option>
+                  <option value="writing">Writing</option>
+                  <option value="life">Life</option>
                 </select>
 
                 <button
@@ -983,7 +984,7 @@ export default function EmbrPage() {
                 )}
 
                 <div className="whitespace-pre-wrap text-sm leading-6">
-                  {message.content}
+                  {message.life}
                 </div>
               </div>
             ))}
