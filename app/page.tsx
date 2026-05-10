@@ -715,7 +715,7 @@ export default function EmbrPage() {
               <div className="mb-2 text-xs uppercase tracking-widest text-slate-500">
                 Mode
               </div>
-              <div className="mt-2 text-[10px] text-slate-600">Embr UI v-mode-test</div>
+              
 
               <select
                 value={projectType}
