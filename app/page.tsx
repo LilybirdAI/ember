@@ -682,7 +682,7 @@ export default function EmbrPage() {
           <div className="mt-5 space-y-3">
             <div>
               <div className="mb-2 text-xs uppercase tracking-widest text-slate-500">
-                Active Project
+                Active Workspace
               </div>
 
               <select
@@ -690,7 +690,7 @@ export default function EmbrPage() {
                 onChange={(e) => handleProjectChange(e.target.value)}
                 className="w-full rounded-lg border border-slate-700 bg-slate-800 p-3 text-sm outline-none"
               >
-                <option value="">No project / General</option>
+                <option value="">General Workspace</option>
                 {projects.map((project) => (
                   <option key={project.id} value={project.id}>
                     {project.name}
