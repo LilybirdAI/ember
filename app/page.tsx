@@ -34,6 +34,18 @@ function normalizeSourceUrl(url: string) {
   return url.trim().replace(/\/$/, "").toLowerCase();
 }
 
+function getSourceDomain(url: string) {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "").toLowerCase();
+  } catch {
+    return "";
+  }
+}
+
+function isBareUrlSource(source: SourceItem) {
+  return typeof source === "string" && /^https?:\/\//i.test(source);
+}
+
 function getSourceKey(source: SourceItem) {
   if (typeof source === "string") {
     return normalizeSourceUrl(source);
@@ -49,15 +61,28 @@ function getSourceKey(source: SourceItem) {
 }
 
 function dedupeSources(sources: SourceItem[]) {
-  const seen = new Set<string>();
+  const seenKeys = new Set<string>();
+  const seenDomains = new Set<string>();
   const result: SourceItem[] = [];
 
   for (const source of sources) {
     const key = getSourceKey(source);
+    const url = typeof source === "string" ? source : source.url || "";
+    const domain = url ? getSourceDomain(url) : "";
 
-    if (!key || seen.has(key)) continue;
+    if (!key) continue;
 
-    seen.add(key);
+    // If a titled search result already exists for a domain,
+    // hide the later bare citation URL for that same domain.
+    if (isBareUrlSource(source) && domain && seenDomains.has(domain)) {
+      continue;
+    }
+
+    if (seenKeys.has(key)) continue;
+
+    seenKeys.add(key);
+    if (domain) seenDomains.add(domain);
+
     result.push(source);
   }
 
