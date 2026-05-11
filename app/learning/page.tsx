@@ -76,11 +76,39 @@ type CorrectionsResponse = {
   error?: string;
 };
 
+type AppliedCorrection = {
+  ok?: boolean;
+  time?: string;
+  fingerprint?: string;
+  risk?: string;
+  autoApplied?: boolean;
+  appliedTo?: string;
+  rule?: string;
+  skippedBecause?: string | null;
+  feedbackSignal?: string | null;
+  target?: {
+    time?: string;
+    message?: string;
+    domain?: string;
+    priority?: string;
+    engine?: string;
+    model?: string;
+    nextMove?: string;
+  } | null;
+};
+
+type AppliedCorrectionsResponse = {
+  ok?: boolean;
+  applied?: AppliedCorrection[];
+  error?: string;
+};
+
 export default function LearningPage() {
   const [summary, setSummary] = useState<SummaryResponse | null>(null);
   const [events, setEvents] = useState<LearningEvent[]>([]);
   const [rules, setRules] = useState("");
   const [corrections, setCorrections] = useState<Correction[]>([]);
+  const [appliedCorrections, setAppliedCorrections] = useState<AppliedCorrection[]>([]);
   const [newRule, setNewRule] = useState("");
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState(false);
@@ -96,27 +124,34 @@ export default function LearningPage() {
     setLoading(true);
 
     try {
-      const [summaryRes, eventsRes, rulesRes, correctionsRes] = await Promise.all([
+      const [summaryRes, eventsRes, rulesRes, correctionsRes, appliedCorrectionsRes] = await Promise.all([
         fetch("/api/learning/summary", { cache: "no-store" }),
         fetch("/api/learning/events", { cache: "no-store" }),
         fetch("/api/learning/rules", { cache: "no-store" }),
         fetch("/api/learning/corrections", { cache: "no-store" }),
+        fetch("/api/learning/applied-corrections", { cache: "no-store" }),
       ]);
 
       const summaryJson = (await summaryRes.json()) as SummaryResponse;
       const eventsJson = (await eventsRes.json()) as EventsResponse;
       const rulesJson = (await rulesRes.json()) as RulesResponse;
       const correctionsJson = (await correctionsRes.json()) as CorrectionsResponse;
+      const appliedCorrectionsJson =
+        (await appliedCorrectionsRes.json()) as AppliedCorrectionsResponse;
 
       if (!summaryRes.ok) throw new Error(summaryJson.error || "Could not load summary.");
       if (!eventsRes.ok) throw new Error(eventsJson.error || "Could not load events.");
       if (!rulesRes.ok) throw new Error(rulesJson.error || "Could not load rules.");
       if (!correctionsRes.ok) throw new Error(correctionsJson.error || "Could not load corrections.");
+      if (!appliedCorrectionsRes.ok) {
+        throw new Error(appliedCorrectionsJson.error || "Could not load applied corrections.");
+      }
 
       setSummary(summaryJson);
       setEvents(eventsJson.events || []);
       setRules(rulesJson.rules || "");
       setCorrections(correctionsJson.corrections || []);
+      setAppliedCorrections(appliedCorrectionsJson.applied || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not load learning data.");
     } finally {
@@ -142,6 +177,31 @@ export default function LearningPage() {
       await loadLearning();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not run reflection.");
+    } finally {
+      setWorking(false);
+    }
+  }
+
+  async function applyLowRiskCorrections() {
+    setWorking(true);
+    setError("");
+
+    try {
+      const res = await fetch("/api/learning/apply-low-risk", {
+        method: "POST",
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Could not apply low-risk corrections.");
+      }
+
+      await loadLearning();
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Could not apply low-risk corrections."
+      );
     } finally {
       setWorking(false);
     }
@@ -243,6 +303,14 @@ export default function LearningPage() {
             >
               Create Self-Correction
             </button>
+
+            <button
+              onClick={applyLowRiskCorrections}
+              disabled={loading || working}
+              className="rounded-xl border border-emerald-500/60 px-4 py-2 text-sm font-semibold text-emerald-300 hover:bg-emerald-500/10 disabled:opacity-50"
+            >
+              Apply Low-Risk
+            </button>
           </div>
         </header>
 
@@ -329,6 +397,48 @@ export default function LearningPage() {
                 )}
               </Panel>
             </section>
+
+            <Panel title="Applied Low-Risk Corrections">
+              {appliedCorrections.length === 0 ? (
+                <p className="text-sm text-slate-400">
+                  No low-risk corrections applied yet.
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {appliedCorrections.slice(-10).reverse().map((item, index) => (
+                    <div
+                      key={`${item.time}-${index}`}
+                      className="rounded-xl border border-slate-800 bg-slate-950 p-3"
+                    >
+                      <div className="flex flex-wrap items-center gap-2 text-xs uppercase tracking-wide text-emerald-400">
+                        <span>{item.autoApplied ? "auto-applied" : "reviewed"}</span>
+                        {item.risk && <span>· {item.risk} risk</span>}
+                        {item.appliedTo && <span>· {item.appliedTo}</span>}
+                      </div>
+
+                      <div className="mt-2 text-sm text-slate-200">
+                        {item.rule || "No rule recorded."}
+                      </div>
+
+                      {item.skippedBecause && (
+                        <div className="mt-2 rounded-lg bg-slate-900 p-2 text-xs text-slate-400">
+                          Skipped: {item.skippedBecause}
+                        </div>
+                      )}
+
+                      {item.target && (
+                        <div className="mt-2 text-xs leading-5 text-slate-400">
+                          Target: {item.target.domain || "unknown"} /{" "}
+                          {item.target.engine || "unknown"}
+                          <br />
+                          Previous: {item.target.message || "No target message"}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Panel>
 
             <Panel title="Self-Corrections">
               {corrections.length === 0 ? (
