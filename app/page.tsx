@@ -30,6 +30,40 @@ type ChatMessage = {
   searchResults?: SourceItem[];
 };
 
+function normalizeSourceUrl(url: string) {
+  return url.trim().replace(/\/$/, "").toLowerCase();
+}
+
+function getSourceKey(source: SourceItem) {
+  if (typeof source === "string") {
+    return normalizeSourceUrl(source);
+  }
+
+  if (source.url) {
+    return normalizeSourceUrl(source.url);
+  }
+
+  return (source.title || source.snippet || source.description || "")
+    .trim()
+    .toLowerCase();
+}
+
+function dedupeSources(sources: SourceItem[]) {
+  const seen = new Set<string>();
+  const result: SourceItem[] = [];
+
+  for (const source of sources) {
+    const key = getSourceKey(source);
+
+    if (!key || seen.has(key)) continue;
+
+    seen.add(key);
+    result.push(source);
+  }
+
+  return result;
+}
+
 type SelectedImage = {
   id: string;
   file: File;
@@ -1024,7 +1058,10 @@ export default function EmbrPage() {
                         Sources
                       </div>
 
-                      {[...(message.searchResults || []), ...(message.citations || [])]
+                      {dedupeSources([
+                          ...(message.searchResults || []),
+                          ...(message.citations || []),
+                        ])
                         .slice(0, 6)
                         .map((source, sourceIndex) => {
                           const title =
