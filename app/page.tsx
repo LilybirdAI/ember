@@ -1122,42 +1122,40 @@ export default function EmbrPage() {
 
                 {message.role === "assistant" &&
                   getDisplaySources(message).length > 0 && (
-                    <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[10px] leading-4 text-slate-500">
-                      <span className="mr-1 inline-flex items-center gap-1 uppercase tracking-wide text-slate-500">
+                    <div className="mt-2 flex items-center gap-1 text-[10px] leading-4 text-slate-500">
+                      <span className="mr-1 inline-flex items-center gap-1 text-slate-600">
                         <span aria-hidden="true">↗</span>
-                        Sources
+                        <span>Sources</span>
                       </span>
 
-                      {getDisplaySources(message).map((source, sourceIndex) => {
-                        const title = getSourceTitle(source, sourceIndex);
-                        const url = getSourceUrl(source);
+                      {getDisplaySources(message)
+                        .slice(0, 3)
+                        .map((source, sourceIndex) => {
+                          const title = getSourceTitle(source, sourceIndex);
+                          const url = getSourceUrl(source);
 
-                        const shortTitle =
-                          title.length > 22 ? `${title.slice(0, 22)}…` : title;
-
-                        return url ? (
-                          <a
-                            key={`${url}-${sourceIndex}`}
-                            href={url}
-                            target="_blank"
-                            rel="noreferrer"
-                            title={title}
-                            className="inline-flex items-center gap-1 rounded-full border border-slate-800 bg-slate-950/60 px-1.5 py-0.5 text-slate-400 hover:border-emerald-500/60 hover:text-emerald-300"
-                          >
-                            <span aria-hidden="true">🔗</span>
-                            <span>[{sourceIndex + 1}] {shortTitle}</span>
-                          </a>
-                        ) : (
-                          <span
-                            key={`${title}-${sourceIndex}`}
-                            title={title}
-                            className="inline-flex items-center gap-1 rounded-full border border-slate-800 bg-slate-950/60 px-1.5 py-0.5 text-slate-500"
-                          >
-                            <span aria-hidden="true">•</span>
-                            <span>[{sourceIndex + 1}] {shortTitle}</span>
-                          </span>
-                        );
-                      })}
+                          return url ? (
+                            <a
+                              key={`${url}-${sourceIndex}`}
+                              href={url}
+                              target="_blank"
+                              rel="noreferrer"
+                              title={title}
+                              aria-label={`Source ${sourceIndex + 1}: ${title}`}
+                              className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-slate-800 bg-slate-950/60 text-[10px] text-slate-500 hover:border-emerald-500/60 hover:text-emerald-300"
+                            >
+                              {sourceIndex + 1}
+                            </a>
+                          ) : (
+                            <span
+                              key={`${title}-${sourceIndex}`}
+                              title={title}
+                              className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-slate-800 bg-slate-950/60 text-[10px] text-slate-500"
+                            >
+                              {sourceIndex + 1}
+                            </span>
+                          );
+                        })}
                     </div>
                   )}
 
