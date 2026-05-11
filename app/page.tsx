@@ -89,6 +89,39 @@ function dedupeSources(sources: SourceItem[]) {
   return result;
 }
 
+function getSourceTitle(source: SourceItem, index: number) {
+  if (typeof source === "string") {
+    try {
+      const url = new URL(source);
+      return url.hostname.replace(/^www\./, "");
+    } catch {
+      return `Source ${index + 1}`;
+    }
+  }
+
+  if (source.title) {
+    return source.title
+      .replace(/\s+/g, " ")
+      .replace(/\s[-|]\s.*$/, "")
+      .trim();
+  }
+
+  if (source.url) {
+    try {
+      const url = new URL(source.url);
+      return url.hostname.replace(/^www\./, "");
+    } catch {
+      return source.url;
+    }
+  }
+
+  return `Source ${index + 1}`;
+}
+
+function getSourceUrl(source: SourceItem) {
+  return typeof source === "string" ? source : source.url || "";
+}
+
 function getDisplaySources(message: ChatMessage) {
   const titledSources = dedupeSources(message.searchResults || []).filter(
     (source) => typeof source !== "string"
@@ -1089,42 +1122,35 @@ export default function EmbrPage() {
 
                 {message.role === "assistant" &&
                   getDisplaySources(message).length > 0 && (
-                    <div className="mt-3 rounded-xl border border-slate-700 bg-slate-900/70 px-3 py-2 text-[11px] leading-5 text-slate-400">
-                      <div className="mb-1 font-semibold uppercase tracking-wide text-emerald-400">
-                        Sources
-                      </div>
+                    <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] leading-5 text-slate-400">
+                      <span className="font-semibold uppercase tracking-wide text-emerald-400">
+                        Sources:
+                      </span>
 
                       {getDisplaySources(message).map((source, sourceIndex) => {
-                          const title =
-                            typeof source === "string"
-                              ? source
-                              : source.title || source.url || `Source ${sourceIndex + 1}`;
+                        const title = getSourceTitle(source, sourceIndex);
+                        const url = getSourceUrl(source);
 
-                          const url =
-                            typeof source === "string" ? "" : source.url || "";
-
-                          const snippet =
-                            typeof source === "string"
-                              ? ""
-                              : source.snippet || source.description || "";
-
-                          return (
-                            <div key={`${title}-${sourceIndex}`} className="mt-2">
-                              {url ? (
-                                <a
-                                  href={url}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="text-emerald-300 underline-offset-2 hover:underline"
-                                >
-                                  {title}
-                                </a>
-                              ) : (
-                                <div className="text-slate-300">{title}</div>
-                              )}
-                            </div>
-                          );
-                        })}
+                        return url ? (
+                          <a
+                            key={`${url}-${sourceIndex}`}
+                            href={url}
+                            target="_blank"
+                            rel="noreferrer"
+                            title={title}
+                            className="rounded-full border border-slate-700 bg-slate-900 px-2 py-1 text-emerald-300 underline-offset-2 hover:border-emerald-500 hover:underline"
+                          >
+                            [{sourceIndex + 1}] {title}
+                          </a>
+                        ) : (
+                          <span
+                            key={`${title}-${sourceIndex}`}
+                            className="rounded-full border border-slate-700 bg-slate-900 px-2 py-1 text-slate-300"
+                          >
+                            [{sourceIndex + 1}] {title}
+                          </span>
+                        );
+                      })}
                     </div>
                   )}
 
