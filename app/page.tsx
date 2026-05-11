@@ -4,6 +4,15 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 
+type SourceItem =
+  | string
+  | {
+      title?: string;
+      url?: string;
+      snippet?: string;
+      description?: string;
+    };
+
 type ChatMessage = {
   role: "user" | "assistant";
   content: string;
@@ -17,6 +26,8 @@ type ChatMessage = {
     voice?: string;
     nextMove?: string;
   };
+  citations?: SourceItem[];
+  searchResults?: SourceItem[];
 };
 
 type SelectedImage = {
@@ -630,6 +641,12 @@ export default function EmbrPage() {
           engine: data.engine,
           model: data.model,
           embrRead: data.embrRead,
+          citations: Array.isArray(data.citations) ? data.citations : [],
+          searchResults: Array.isArray(data.search_results)
+            ? data.search_results
+            : Array.isArray(data.searchResults)
+              ? data.searchResults
+              : [],
         },
       ]);
 
@@ -998,6 +1015,54 @@ export default function EmbrPage() {
                 <div className="whitespace-pre-wrap text-sm leading-6">
                   {message.content}
                 </div>
+
+                {message.role === "assistant" &&
+                  ((message.searchResults && message.searchResults.length > 0) ||
+                    (message.citations && message.citations.length > 0)) && (
+                    <div className="mt-3 rounded-xl border border-slate-700 bg-slate-900/70 px-3 py-2 text-[11px] leading-5 text-slate-400">
+                      <div className="mb-1 font-semibold uppercase tracking-wide text-emerald-400">
+                        Sources
+                      </div>
+
+                      {[...(message.searchResults || []), ...(message.citations || [])]
+                        .slice(0, 6)
+                        .map((source, sourceIndex) => {
+                          const title =
+                            typeof source === "string"
+                              ? source
+                              : source.title || source.url || `Source ${sourceIndex + 1}`;
+
+                          const url =
+                            typeof source === "string" ? "" : source.url || "";
+
+                          const snippet =
+                            typeof source === "string"
+                              ? ""
+                              : source.snippet || source.description || "";
+
+                          return (
+                            <div key={`${title}-${sourceIndex}`} className="mt-2">
+                              {url ? (
+                                <a
+                                  href={url}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="text-emerald-300 underline-offset-2 hover:underline"
+                                >
+                                  {title}
+                                </a>
+                              ) : (
+                                <div className="text-slate-300">{title}</div>
+                              )}
+
+                              {snippet && (
+                                <div className="mt-1 text-slate-500">{snippet}</div>
+                              )}
+                            </div>
+                          );
+                        })}
+                    </div>
+                  )}
 
                 {message.role === "assistant" &&
                   (message.engine || message.model || message.embrRead) && (
