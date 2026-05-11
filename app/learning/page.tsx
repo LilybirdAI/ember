@@ -103,12 +103,26 @@ type AppliedCorrectionsResponse = {
   error?: string;
 };
 
+type ProfileResponse = {
+  ok?: boolean;
+  profile?: {
+    name?: string;
+    location?: string;
+    city?: string;
+    state?: string;
+    updatedAt?: string;
+    facts?: Record<string, string>;
+  };
+  error?: string;
+};
+
 export default function LearningPage() {
   const [summary, setSummary] = useState<SummaryResponse | null>(null);
   const [events, setEvents] = useState<LearningEvent[]>([]);
   const [rules, setRules] = useState("");
   const [corrections, setCorrections] = useState<Correction[]>([]);
   const [appliedCorrections, setAppliedCorrections] = useState<AppliedCorrection[]>([]);
+  const [profile, setProfile] = useState<ProfileResponse["profile"] | null>(null);
   const [newRule, setNewRule] = useState("");
   const [dashboardKey, setDashboardKey] = useState("");
   const [keyInput, setKeyInput] = useState("");
@@ -138,7 +152,14 @@ export default function LearningPage() {
     setLoading(true);
 
     try {
-      const [summaryRes, eventsRes, rulesRes, correctionsRes, appliedCorrectionsRes] = await Promise.all([
+      const [
+        summaryRes,
+        eventsRes,
+        rulesRes,
+        correctionsRes,
+        appliedCorrectionsRes,
+        profileRes,
+      ] = await Promise.all([
         fetch("/api/learning/summary", {
           cache: "no-store",
           headers: learningHeaders(),
@@ -159,6 +180,10 @@ export default function LearningPage() {
           cache: "no-store",
           headers: learningHeaders(),
         }),
+        fetch("/api/learning/profile", {
+          cache: "no-store",
+          headers: learningHeaders(),
+        }),
       ]);
 
       const summaryJson = (await summaryRes.json()) as SummaryResponse;
@@ -167,6 +192,7 @@ export default function LearningPage() {
       const correctionsJson = (await correctionsRes.json()) as CorrectionsResponse;
       const appliedCorrectionsJson =
         (await appliedCorrectionsRes.json()) as AppliedCorrectionsResponse;
+      const profileJson = (await profileRes.json()) as ProfileResponse;
 
       if (!summaryRes.ok) throw new Error(summaryJson.error || "Could not load summary.");
       if (!eventsRes.ok) throw new Error(eventsJson.error || "Could not load events.");
@@ -175,12 +201,16 @@ export default function LearningPage() {
       if (!appliedCorrectionsRes.ok) {
         throw new Error(appliedCorrectionsJson.error || "Could not load applied corrections.");
       }
+      if (!profileRes.ok) {
+        throw new Error(profileJson.error || "Could not load profile memory.");
+      }
 
       setSummary(summaryJson);
       setEvents(eventsJson.events || []);
       setRules(rulesJson.rules || "");
       setCorrections(correctionsJson.corrections || []);
       setAppliedCorrections(appliedCorrectionsJson.applied || []);
+      setProfile(profileJson.profile || null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not load learning data.");
     } finally {
@@ -207,6 +237,36 @@ export default function LearningPage() {
       await loadLearning();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not run reflection.");
+    } finally {
+      setWorking(false);
+    }
+  }
+
+  async function clearProfileMemory() {
+    const confirmed = window.confirm(
+      "Clear Embr profile memory? This removes saved name/location from the DigitalOcean memory file."
+    );
+
+    if (!confirmed) return;
+
+    setWorking(true);
+    setError("");
+
+    try {
+      const res = await fetch("/api/learning/profile", {
+        method: "DELETE",
+        headers: learningHeaders(),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Could not clear profile memory.");
+      }
+
+      await loadLearning();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not clear profile memory.");
     } finally {
       setWorking(false);
     }
@@ -319,6 +379,7 @@ export default function LearningPage() {
     setRules("");
     setCorrections([]);
     setAppliedCorrections([]);
+    setProfile(null);
   }
 
   useEffect(() => {
@@ -458,6 +519,36 @@ export default function LearningPage() {
             </section>
 
             <section className="grid gap-6 lg:grid-cols-2">
+              <Panel title="Profile Memory">
+                <div className="space-y-3 text-sm">
+                  <div className="rounded-xl bg-slate-950 px-3 py-2">
+                    <span className="text-slate-500">Name:</span>{" "}
+                    <span className="text-slate-200">{profile?.name || "Not saved"}</span>
+                  </div>
+
+                  <div className="rounded-xl bg-slate-950 px-3 py-2">
+                    <span className="text-slate-500">Location:</span>{" "}
+                    <span className="text-slate-200">
+                      {profile?.location || "Not saved"}
+                    </span>
+                  </div>
+
+                  <div className="rounded-xl bg-slate-950 px-3 py-2">
+                    <span className="text-slate-500">Updated:</span>{" "}
+                    <span className="text-slate-200">
+                      {profile?.updatedAt || "Unknown"}
+                    </span>
+                  </div>
+
+                  <button
+                    onClick={clearProfileMemory}
+                    disabled={working}
+                    className="rounded-xl border border-red-500/60 px-4 py-2 text-sm font-semibold text-red-300 hover:bg-red-500/10 disabled:opacity-50"
+                  >
+                    Clear Profile Memory
+                  </button>
+                </div>
+              </Panel>
               <Panel title="Domains">
                 <KeyValueList data={summary?.byDomain || {}} />
               </Panel>
@@ -468,6 +559,36 @@ export default function LearningPage() {
             </section>
 
             <section className="grid gap-6 lg:grid-cols-2">
+              <Panel title="Profile Memory">
+                <div className="space-y-3 text-sm">
+                  <div className="rounded-xl bg-slate-950 px-3 py-2">
+                    <span className="text-slate-500">Name:</span>{" "}
+                    <span className="text-slate-200">{profile?.name || "Not saved"}</span>
+                  </div>
+
+                  <div className="rounded-xl bg-slate-950 px-3 py-2">
+                    <span className="text-slate-500">Location:</span>{" "}
+                    <span className="text-slate-200">
+                      {profile?.location || "Not saved"}
+                    </span>
+                  </div>
+
+                  <div className="rounded-xl bg-slate-950 px-3 py-2">
+                    <span className="text-slate-500">Updated:</span>{" "}
+                    <span className="text-slate-200">
+                      {profile?.updatedAt || "Unknown"}
+                    </span>
+                  </div>
+
+                  <button
+                    onClick={clearProfileMemory}
+                    disabled={working}
+                    className="rounded-xl border border-red-500/60 px-4 py-2 text-sm font-semibold text-red-300 hover:bg-red-500/10 disabled:opacity-50"
+                  >
+                    Clear Profile Memory
+                  </button>
+                </div>
+              </Panel>
               <Panel title="Active Approved Rules">
                 <pre className="max-h-[420px] overflow-auto whitespace-pre-wrap rounded-xl bg-slate-950 p-4 text-xs leading-6 text-slate-300">
                   {rules || "No active rules loaded."}
