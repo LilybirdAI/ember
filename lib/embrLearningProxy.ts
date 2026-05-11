@@ -21,8 +21,32 @@ function getAdminToken() {
   return token;
 }
 
-export async function fetchEmbrLearning(path: string, init?: RequestInit) {
+function requireDashboardKey(req?: Request) {
+  const expected = process.env.EMBR_DASHBOARD_KEY;
+
+  if (!expected) {
+    throw new Error("Missing EMBR_DASHBOARD_KEY");
+  }
+
+  const provided = req?.headers.get("x-embr-dashboard-key");
+
+  if (provided !== expected) {
+    return false;
+  }
+
+  return true;
+}
+
+export async function fetchEmbrLearning(
+  path: string,
+  init?: RequestInit,
+  req?: Request
+) {
   try {
+    if (!requireDashboardKey(req)) {
+      return jsonError("Forbidden.", 403);
+    }
+
     const token = getAdminToken();
 
     const upstream = await fetch(`${EMBR_SERVER_URL}${path}`, {
@@ -37,13 +61,16 @@ export async function fetchEmbrLearning(path: string, init?: RequestInit) {
 
     const text = await upstream.text();
 
-    return new Response(text || JSON.stringify({ ok: false, error: "Empty response from Embr server" }), {
-      status: upstream.status,
-      headers: {
-        "Content-Type":
-          upstream.headers.get("content-type") || "application/json",
-      },
-    });
+    return new Response(
+      text || JSON.stringify({ ok: false, error: "Empty response from Embr server" }),
+      {
+        status: upstream.status,
+        headers: {
+          "Content-Type":
+            upstream.headers.get("content-type") || "application/json",
+        },
+      }
+    );
   } catch (error) {
     return jsonError(
       error instanceof Error ? error.message : "Learning proxy failed",

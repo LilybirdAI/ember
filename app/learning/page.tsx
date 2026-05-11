@@ -110,6 +110,9 @@ export default function LearningPage() {
   const [corrections, setCorrections] = useState<Correction[]>([]);
   const [appliedCorrections, setAppliedCorrections] = useState<AppliedCorrection[]>([]);
   const [newRule, setNewRule] = useState("");
+  const [dashboardKey, setDashboardKey] = useState("");
+  const [keyInput, setKeyInput] = useState("");
+  const [unlocked, setUnlocked] = useState(false);
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState(false);
   const [error, setError] = useState("");
@@ -119,17 +122,43 @@ export default function LearningPage() {
     [events]
   );
 
+  function learningHeaders() {
+    return {
+      "x-embr-dashboard-key": dashboardKey,
+    };
+  }
+
   async function loadLearning() {
+    if (!dashboardKey) {
+      setLoading(false);
+      return;
+    }
+
     setError("");
     setLoading(true);
 
     try {
       const [summaryRes, eventsRes, rulesRes, correctionsRes, appliedCorrectionsRes] = await Promise.all([
-        fetch("/api/learning/summary", { cache: "no-store" }),
-        fetch("/api/learning/events", { cache: "no-store" }),
-        fetch("/api/learning/rules", { cache: "no-store" }),
-        fetch("/api/learning/corrections", { cache: "no-store" }),
-        fetch("/api/learning/applied-corrections", { cache: "no-store" }),
+        fetch("/api/learning/summary", {
+          cache: "no-store",
+          headers: learningHeaders(),
+        }),
+        fetch("/api/learning/events", {
+          cache: "no-store",
+          headers: learningHeaders(),
+        }),
+        fetch("/api/learning/rules", {
+          cache: "no-store",
+          headers: learningHeaders(),
+        }),
+        fetch("/api/learning/corrections", {
+          cache: "no-store",
+          headers: learningHeaders(),
+        }),
+        fetch("/api/learning/applied-corrections", {
+          cache: "no-store",
+          headers: learningHeaders(),
+        }),
       ]);
 
       const summaryJson = (await summaryRes.json()) as SummaryResponse;
@@ -166,6 +195,7 @@ export default function LearningPage() {
     try {
       const res = await fetch("/api/learning/reflect", {
         method: "POST",
+        headers: learningHeaders(),
       });
 
       const data = await res.json();
@@ -189,6 +219,7 @@ export default function LearningPage() {
     try {
       const res = await fetch("/api/learning/apply-low-risk", {
         method: "POST",
+        headers: learningHeaders(),
       });
 
       const data = await res.json();
@@ -214,6 +245,7 @@ export default function LearningPage() {
     try {
       const res = await fetch("/api/learning/correct", {
         method: "POST",
+        headers: learningHeaders(),
       });
 
       const data = await res.json();
@@ -243,6 +275,7 @@ export default function LearningPage() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          ...learningHeaders(),
         },
         body: JSON.stringify({ rule }),
       });
@@ -262,9 +295,92 @@ export default function LearningPage() {
     }
   }
 
+  function unlockDashboard() {
+    const cleanKey = keyInput.trim();
+
+    if (!cleanKey) {
+      setError("Enter the dashboard key.");
+      return;
+    }
+
+    sessionStorage.setItem("embr_dashboard_key", cleanKey);
+    setDashboardKey(cleanKey);
+    setUnlocked(true);
+    setError("");
+  }
+
+  function lockDashboard() {
+    sessionStorage.removeItem("embr_dashboard_key");
+    setDashboardKey("");
+    setKeyInput("");
+    setUnlocked(false);
+    setSummary(null);
+    setEvents([]);
+    setRules("");
+    setCorrections([]);
+    setAppliedCorrections([]);
+  }
+
   useEffect(() => {
-    loadLearning();
+    const savedKey = sessionStorage.getItem("embr_dashboard_key") || "";
+
+    if (savedKey) {
+      setDashboardKey(savedKey);
+      setKeyInput(savedKey);
+      setUnlocked(true);
+    } else {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    if (dashboardKey && unlocked) {
+      loadLearning();
+    }
+  }, [dashboardKey, unlocked]);
+
+  if (!unlocked) {
+    return (
+      <main className="min-h-screen bg-slate-950 px-4 py-8 text-slate-100">
+        <div className="mx-auto max-w-xl rounded-2xl border border-slate-800 bg-slate-900 p-6">
+          <div className="text-xs uppercase tracking-[0.3em] text-yellow-400">
+            Embr Learning
+          </div>
+          <h1 className="mt-2 text-3xl font-bold">Dashboard Locked</h1>
+          <p className="mt-2 text-sm leading-6 text-slate-400">
+            Enter your private dashboard key to view Embr learning data. This is
+            separate from the server admin token.
+          </p>
+
+          {error && (
+            <div className="mt-4 rounded-xl border border-red-500/40 bg-red-950/40 p-3 text-sm text-red-200">
+              {error}
+            </div>
+          )}
+
+          <div className="mt-5 space-y-3">
+            <input
+              type="password"
+              value={keyInput}
+              onChange={(e) => setKeyInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") unlockDashboard();
+              }}
+              placeholder="Dashboard key"
+              className="w-full rounded-xl border border-slate-700 bg-slate-950 p-3 text-sm outline-none focus:border-yellow-400"
+            />
+
+            <button
+              onClick={unlockDashboard}
+              className="w-full rounded-xl bg-yellow-500 px-4 py-3 text-sm font-semibold text-slate-950 hover:bg-yellow-400"
+            >
+              Unlock Learning Dashboard
+            </button>
+          </div>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-slate-950 px-4 py-8 text-slate-100">
@@ -310,6 +426,14 @@ export default function LearningPage() {
               className="rounded-xl border border-emerald-500/60 px-4 py-2 text-sm font-semibold text-emerald-300 hover:bg-emerald-500/10 disabled:opacity-50"
             >
               Apply Low-Risk
+            </button>
+
+            <button
+              onClick={lockDashboard}
+              disabled={working}
+              className="rounded-xl border border-slate-600 px-4 py-2 text-sm font-semibold text-slate-300 hover:bg-slate-800 disabled:opacity-50"
+            >
+              Lock Dashboard
             </button>
           </div>
         </header>
