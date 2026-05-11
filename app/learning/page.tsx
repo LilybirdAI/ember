@@ -123,6 +123,7 @@ export default function LearningPage() {
   const [corrections, setCorrections] = useState<Correction[]>([]);
   const [appliedCorrections, setAppliedCorrections] = useState<AppliedCorrection[]>([]);
   const [profile, setProfile] = useState<ProfileResponse["profile"] | null>(null);
+  const [profileError, setProfileError] = useState("");
   const [newRule, setNewRule] = useState("");
   const [dashboardKey, setDashboardKey] = useState("");
   const [keyInput, setKeyInput] = useState("");
@@ -201,16 +202,19 @@ export default function LearningPage() {
       if (!appliedCorrectionsRes.ok) {
         throw new Error(appliedCorrectionsJson.error || "Could not load applied corrections.");
       }
-      if (!profileRes.ok) {
-        throw new Error(profileJson.error || "Could not load profile memory.");
-      }
-
       setSummary(summaryJson);
       setEvents(eventsJson.events || []);
       setRules(rulesJson.rules || "");
       setCorrections(correctionsJson.corrections || []);
       setAppliedCorrections(appliedCorrectionsJson.applied || []);
-      setProfile(profileJson.profile || null);
+
+      if (!profileRes.ok) {
+        setProfile(null);
+        setProfileError(profileJson.error || "Sign in required to view profile memory.");
+      } else {
+        setProfile(profileJson.profile || null);
+        setProfileError("");
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not load learning data.");
     } finally {
@@ -380,6 +384,7 @@ export default function LearningPage() {
     setCorrections([]);
     setAppliedCorrections([]);
     setProfile(null);
+    setProfileError("");
   }
 
   useEffect(() => {
@@ -520,6 +525,12 @@ export default function LearningPage() {
 
             <section className="grid gap-6 lg:grid-cols-2">
               <Panel title="Profile Memory">
+                {profileError && (
+                  <div className="mb-3 rounded-xl border border-yellow-500/30 bg-yellow-950/30 p-3 text-sm text-yellow-200">
+                    {profileError}
+                  </div>
+                )}
+
                 <div className="space-y-3 text-sm">
                   <div className="rounded-xl bg-slate-950 px-3 py-2">
                     <span className="text-slate-500">Name:</span>{" "}
@@ -559,36 +570,7 @@ export default function LearningPage() {
             </section>
 
             <section className="grid gap-6 lg:grid-cols-2">
-              <Panel title="Profile Memory">
-                <div className="space-y-3 text-sm">
-                  <div className="rounded-xl bg-slate-950 px-3 py-2">
-                    <span className="text-slate-500">Name:</span>{" "}
-                    <span className="text-slate-200">{profile?.name || "Not saved"}</span>
-                  </div>
-
-                  <div className="rounded-xl bg-slate-950 px-3 py-2">
-                    <span className="text-slate-500">Location:</span>{" "}
-                    <span className="text-slate-200">
-                      {profile?.location || "Not saved"}
-                    </span>
-                  </div>
-
-                  <div className="rounded-xl bg-slate-950 px-3 py-2">
-                    <span className="text-slate-500">Updated:</span>{" "}
-                    <span className="text-slate-200">
-                      {profile?.updatedAt || "Unknown"}
-                    </span>
-                  </div>
-
-                  <button
-                    onClick={clearProfileMemory}
-                    disabled={working}
-                    className="rounded-xl border border-red-500/60 px-4 py-2 text-sm font-semibold text-red-300 hover:bg-red-500/10 disabled:opacity-50"
-                  >
-                    Clear Profile Memory
-                  </button>
-                </div>
-              </Panel>
+              
               <Panel title="Active Approved Rules">
                 <pre className="max-h-[420px] overflow-auto whitespace-pre-wrap rounded-xl bg-slate-950 p-4 text-xs leading-6 text-slate-300">
                   {rules || "No active rules loaded."}
