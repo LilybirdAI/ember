@@ -149,6 +149,57 @@ function getFriendlyErrorMessage(error: unknown) {
   return message || "Embr hit an error. Try again.";
 }
 
+
+function shouldCreateAppCommand(value: string) {
+  const lower = value.toLowerCase();
+
+  if (!lower.trim()) return false;
+
+  const appNouns = [
+    "app",
+    "dashboard",
+    "tracker",
+    "crm",
+    "portal",
+    "system",
+    "tool",
+    "website",
+    "client portal",
+    "lead tracker",
+    "invoice tracker",
+    "real estate",
+    "booking system",
+  ];
+
+  const buildVerbs = [
+    "build",
+    "create",
+    "make",
+    "generate",
+    "design",
+    "turn this into",
+  ];
+
+  const explicitBuild =
+    buildVerbs.some((verb) => lower.includes(verb)) &&
+    appNouns.some((noun) => lower.includes(noun));
+
+  const directBusinessApp =
+    lower.includes("i need a crm") ||
+    lower.includes("i need an app") ||
+    lower.includes("i need a dashboard") ||
+    lower.includes("i need a tracker") ||
+    lower.includes("make me a crm") ||
+    lower.includes("make me an app") ||
+    lower.includes("real estate lead tracker") ||
+    lower.includes("invoice tracker") ||
+    lower.includes("booking system") ||
+    lower.includes("client portal");
+
+  return explicitBuild || directBusinessApp;
+}
+
+
 export default function EmbrPage() {
   const router = useRouter();
   const chatScrollRef = useRef<HTMLDivElement | null>(null);
@@ -576,8 +627,59 @@ export default function EmbrPage() {
     setInput("");
     setLoading(true);
 
+    const shouldCreateApp =
+      selectedImages.length === 0 && shouldCreateAppCommand(userMessage);
+
     try {
       const token = await getAccessToken();
+
+      if (shouldCreateApp) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            content:
+              "Embr is creating the app now. I’ll open the generated app when it is ready.",
+          },
+        ]);
+
+        const res = await fetch("/api/app-builder/generate", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            prompt: userMessage,
+            projectId: selectedProjectId,
+          }),
+        });
+
+        const data = await parseJsonResponse(res);
+
+        if (!res.ok) {
+          throw new Error(data.output || data.error || "Embr could not create the app.");
+        }
+
+        const generatedAppId = data.generatedApp?.id;
+
+        if (!generatedAppId) {
+          throw new Error("Generated app id was missing.");
+        }
+
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            content: `Created ${data.generatedApp?.name || "the app"}. Opening it now.`,
+          },
+        ]);
+
+        await Promise.all([loadConversations(), loadUsage(), loadProjects()]);
+
+        router.push(`/generated-apps/${generatedAppId}`);
+        return;
+      }
 
       const imageBase64List =
         selectedImages.length > 0
@@ -671,292 +773,13 @@ export default function EmbrPage() {
 
   return (
     <main className="min-h-screen bg-slate-950 text-white p-4 xl:p-6">
-      <div className="mx-auto grid max-w-[1600px] grid-cols-1 gap-4 xl:h-[88vh] xl:grid-cols-[300px_minmax(0,1fr)]">
-        <aside className="rounded-xl border border-slate-800 bg-slate-900 p-4 xl:h-full xl:overflow-y-auto">
-          <h1 className="text-2xl font-bold text-yellow-400">Embr</h1>
-
-          <div className="mt-1 truncate text-xs text-slate-500">
-            {userEmail}
-          </div>
-
-          <a
-            href="/generated-apps"
-            className="mt-4 block rounded-lg border border-yellow-500/40 bg-yellow-500/10 px-3 py-2 text-center text-sm font-semibold text-yellow-400 hover:bg-yellow-500/20"
-          >
-            Generated Apps
-          </a>
-
-          <div className="mt-5 space-y-3">
-            <div>
-              <div className="mb-2 text-xs uppercase tracking-widest text-slate-500">
-                Active Project
-              </div>
-
-              <select
-                value={selectedProjectId || ""}
-                onChange={(e) => handleProjectChange(e.target.value)}
-                className="w-full rounded-lg border border-slate-700 bg-slate-800 p-3 text-sm outline-none"
-              >
-                <option value="">No project / General</option>
-                {projects.map((project) => (
-                  <option key={project.id} value={project.id}>
-                    {project.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {activeProject && (
-              <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-3 text-sm">
-                <div className="font-semibold text-yellow-400">
-                  {activeProject.name}
-                </div>
-
-                <div className="mt-1 text-xs text-slate-400">
-                  {activeProject.type} · {activeProject.status}
-                </div>
-              </div>
-            )}
-
-            <div>
-              <div className="mb-2 text-xs uppercase tracking-widest text-slate-500">
-                Mode
-              </div>
-
-              <select
-                value={projectType}
-                onChange={(e) => setProjectType(e.target.value as ProjectType)}
-                className="w-full rounded-lg border border-slate-700 bg-slate-800 p-3 text-sm outline-none"
-              >
-                <option value="general">General</option>
-                <option value="website">Website</option>
-                <option value="ios_app">iOS App</option>
-                <option value="android_app">Android App</option>
-                <option value="full_stack_app">Full Stack App</option>
-                <option value="content">Content</option>
-              </select>
-            </div>
-
-            <div>
-              <div className="mb-2 text-xs uppercase tracking-widest text-slate-500">
-                AI Power
-              </div>
-
-              <select
-                value={aiMode}
-                onChange={(e) => setAiMode(e.target.value as AIMode)}
-                className="w-full rounded-lg border border-slate-700 bg-slate-800 p-3 text-sm outline-none"
-              >
-                <option value="auto">Auto</option>
-                <option value="light">Light</option>
-                <option value="heavy">Heavy</option>
-              </select>
-
-              <div className="mt-1 text-xs text-slate-500">
-                Auto saves usage. Heavy thinks harder.
-              </div>
-            </div>
-          </div>
-
-          <section className="mt-5 rounded-xl border border-slate-800 bg-slate-950 p-3">
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setShowProjectTools((current) => !current)}
-                className="flex-1 rounded-lg border border-yellow-500/40 bg-yellow-500/10 px-3 py-2 text-sm font-semibold text-yellow-400 hover:bg-yellow-500/20"
-              >
-                {showProjectTools ? "Hide Project Tools" : "+ New Project"}
-              </button>
-
-              <button
-                type="button"
-                onClick={loadProjects}
-                className="rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-xs font-semibold text-slate-300 hover:bg-slate-700"
-              >
-                Refresh
-              </button>
-            </div>
-
-            {showProjectTools && (
-              <div className="mt-3 space-y-2">
-                <input
-                  value={newProjectName}
-                  onChange={(e) => setNewProjectName(e.target.value)}
-                  className="w-full rounded-lg border border-slate-700 bg-slate-800 p-2 text-sm outline-none"
-                  placeholder="Project name"
-                />
-
-                <select
-                  value={newProjectType}
-                  onChange={(e) =>
-                    setNewProjectType(e.target.value as ProjectType)
-                  }
-                  className="w-full rounded-lg border border-slate-700 bg-slate-800 p-2 text-sm outline-none"
-                >
-                  <option value="general">General</option>
-                  <option value="website">Website</option>
-                  <option value="ios_app">iOS App</option>
-                  <option value="android_app">Android App</option>
-                  <option value="full_stack_app">Full Stack App</option>
-                  <option value="content">Content</option>
-                </select>
-
-                <button
-                  type="button"
-                  onClick={createProject}
-                  disabled={creatingProject}
-                  className="w-full rounded-lg bg-yellow-500 px-3 py-2 text-sm font-bold text-black disabled:opacity-50"
-                >
-                  {creatingProject ? "Creating..." : "Create Project"}
-                </button>
-              </div>
-            )}
-          </section>
-
-          <section className="mt-4 rounded-xl border border-slate-800 bg-slate-950 p-4">
-            <div className="mb-2 flex items-center justify-between">
-              <div className="text-sm font-semibold text-slate-200">
-                Monthly Usage
-              </div>
-
-              <button
-                type="button"
-                onClick={loadUsage}
-                className="text-xs text-yellow-400 hover:text-yellow-300"
-              >
-                Refresh
-              </button>
-            </div>
-
-            {loadingUsage && !usage ? (
-              <div className="text-sm text-slate-500">Loading usage...</div>
-            ) : usage ? (
-              <>
-                <div className="mb-2 text-xs text-slate-400">
-                  {formatTokens(usage.used)} used / {formatTokens(usage.limit)} limit
-                </div>
-
-                <div className="h-2 w-full overflow-hidden rounded-full bg-slate-800">
-                  <div
-                    className="h-full rounded-full bg-yellow-500"
-                    style={{
-                      width: `${Math.min(
-                        100,
-                        usage.limit > 0 ? (usage.used / usage.limit) * 100 : 0
-                      )}%`,
-                    }}
-                  />
-                </div>
-
-                <div className="mt-2 text-xs text-slate-500">
-                  {formatTokens(usage.remaining)} remaining this month
-                </div>
-              </>
-            ) : (
-              <div className="text-sm text-slate-500">No usage data yet.</div>
-            )}
-          </section>
-
-          <section className="mt-4 rounded-xl border border-slate-800 bg-slate-950 p-4">
-            <div className="mb-3 flex items-center justify-between">
-              <div className="text-sm font-semibold text-slate-200">
-                Conversations
-              </div>
-
-              <button
-                type="button"
-                onClick={loadConversations}
-                className="text-xs text-yellow-400 hover:text-yellow-300"
-              >
-                Refresh
-              </button>
-            </div>
-
-            <div className="max-h-[520px] space-y-2 overflow-y-auto pr-1">
-              {loadingConversations && (
-                <div className="rounded-lg bg-slate-800 p-3 text-sm text-slate-400">
-                  Loading conversations...
-                </div>
-              )}
-
-              {!loadingConversations && visibleConversations.length === 0 && (
-                <div className="rounded-lg bg-slate-800 p-3 text-sm text-slate-400">
-                  No conversations yet.
-                </div>
-              )}
-
-              {visibleConversations.map((conversation) => {
-                const active = conversation.id === conversationId;
-
-                return (
-                  <div
-                    key={conversation.id}
-                    className={
-                      active
-                        ? "rounded-lg border border-yellow-500 bg-yellow-500/10 p-3"
-                        : "rounded-lg border border-slate-800 bg-slate-800 p-3 hover:bg-slate-700"
-                    }
-                  >
-                    <button
-                      type="button"
-                      onClick={() => loadConversation(conversation.id)}
-                      className="w-full text-left"
-                    >
-                      <div className="break-words text-sm font-semibold text-slate-100">
-                        {conversation.title}
-                      </div>
-
-                      <div className="mt-1 flex items-center justify-between gap-2 text-xs text-slate-500">
-                        <span>{conversation.project_type}</span>
-                        <span>{formatDate(conversation.updated_at)}</span>
-                      </div>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => deleteConversation(conversation.id)}
-                      className="mt-2 text-xs text-red-300 hover:text-red-200"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          </section>
-
-          <div className="mt-6 border-t border-slate-800 pt-4">
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="w-full rounded-lg border border-red-900 bg-red-950/40 px-3 py-2 text-sm font-semibold text-red-300 hover:bg-red-950"
-            >
-              Log Out
-            </button>
-          </div>
-        </aside>
-
+      <div className="mx-auto grid max-w-[1600px] grid-cols-1 gap-4 xl:h-[88vh] xl:grid-cols-1">
         <section className="flex min-h-[70vh] flex-col rounded-xl border border-slate-800 bg-slate-900 p-4 xl:h-full">
-          <div className="mb-4 flex items-center justify-between gap-4">
-            <div>
-              <div className="text-lg font-semibold">Builder Chat</div>
-
-              <div className="text-xs text-slate-500">
-                {activeProject
-                  ? `Project: ${activeProject.name}`
-                  : conversationId
-                    ? "Saved conversation active"
-                    : "New conversation"}
-              </div>
+          <div className="mb-4">
+            <div className="text-3xl font-bold text-yellow-400">Embr</div>
+            <div className="mt-1 text-sm text-slate-500">
+              Type what you need. Embr will decide whether to answer, analyze, or build.
             </div>
-
-            <button
-              type="button"
-              onClick={() => resetChatForProject(activeProject)}
-              className="rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-xs font-semibold text-slate-200 hover:bg-slate-700"
-            >
-              New Chat
-            </button>
           </div>
 
           <div
@@ -997,7 +820,7 @@ export default function EmbrPage() {
 
             {loading && (
               <div className="mr-auto max-w-[85%] rounded-2xl border border-yellow-500 bg-slate-800 px-4 py-3 text-slate-100">
-                Embr is thinking...
+                Embr is working...
               </div>
             )}
           </div>
@@ -1069,8 +892,8 @@ export default function EmbrPage() {
                 className="flex-1 rounded-lg border border-slate-700 bg-slate-800 p-3 outline-none"
                 placeholder={
                   activeProject
-                    ? `Ask Embr about ${activeProject.name} or upload photos...`
-                    : "Type a message or upload photos — Embr will infer the next step..."
+                    ? `Ask Embr about ${activeProject.name}, build something, or upload a photo...`
+                    : "Type anything — ask, build, analyze, or upload a photo..."
                 }
               />
 
