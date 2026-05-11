@@ -89,6 +89,18 @@ function dedupeSources(sources: SourceItem[]) {
   return result;
 }
 
+function getDisplaySources(message: ChatMessage) {
+  const titledSources = dedupeSources(message.searchResults || []).filter(
+    (source) => typeof source !== "string"
+  );
+
+  if (titledSources.length > 0) {
+    return titledSources.slice(0, 3);
+  }
+
+  return dedupeSources(message.citations || []).slice(0, 3);
+}
+
 type SelectedImage = {
   id: string;
   file: File;
@@ -1076,20 +1088,13 @@ export default function EmbrPage() {
                 </div>
 
                 {message.role === "assistant" &&
-                  ((message.searchResults && message.searchResults.length > 0) ||
-                    (message.citations && message.citations.length > 0)) && (
+                  getDisplaySources(message).length > 0 && (
                     <div className="mt-3 rounded-xl border border-slate-700 bg-slate-900/70 px-3 py-2 text-[11px] leading-5 text-slate-400">
                       <div className="mb-1 font-semibold uppercase tracking-wide text-emerald-400">
                         Sources
                       </div>
 
-                      {dedupeSources(
-                          message.searchResults && message.searchResults.length > 0
-                            ? message.searchResults
-                            : message.citations || []
-                        )
-                        .slice(0, 6)
-                        .map((source, sourceIndex) => {
+                      {getDisplaySources(message).map((source, sourceIndex) => {
                           const title =
                             typeof source === "string"
                               ? source
@@ -1116,10 +1121,6 @@ export default function EmbrPage() {
                                 </a>
                               ) : (
                                 <div className="text-slate-300">{title}</div>
-                              )}
-
-                              {snippet && (
-                                <div className="mt-1 text-slate-500">{snippet}</div>
                               )}
                             </div>
                           );
