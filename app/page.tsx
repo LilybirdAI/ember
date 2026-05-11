@@ -1083,10 +1083,11 @@ export default function EmbrPage() {
                         Sources
                       </div>
 
-                      {dedupeSources([
-                          ...(message.searchResults || []),
-                          ...(message.citations || []),
-                        ])
+                      {dedupeSources(
+                          message.searchResults && message.searchResults.length > 0
+                            ? message.searchResults
+                            : message.citations || []
+                        )
                         .slice(0, 6)
                         .map((source, sourceIndex) => {
                           const title =
