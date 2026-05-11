@@ -1,4 +1,4 @@
-import OpenAI from "openai";
+import { getOpenAIClient } from "@/lib/openai";
 import {
   apiBadRequest,
   apiOk,
@@ -11,10 +11,6 @@ import { getUserFromRequest, isAuthError } from "@/lib/authServer";
 import { getEmbrProductState } from "@/lib/embrProductState";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { checkMonthlyUsageLimit, logUsageEvent } from "@/lib/usage";
-
-const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
 
 function cleanString(value: unknown, fallback = "") {
   if (typeof value !== "string") return fallback;
@@ -207,7 +203,7 @@ ${prompt}
       };
     }
 
-    const response = await client.responses.create(responseOptions);
+    const response = await getOpenAIClient().responses.create(responseOptions);
 
     const raw = response.output_text || "";
 

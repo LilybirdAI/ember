@@ -1,6 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getUserFromRequest, isAuthError } from "@/lib/authServer";
-import { supabaseAdmin } from "@/lib/supabaseAdmin";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+async function getRouteDeps(req: NextRequest) {
+  const { getUserFromRequest } = await import("@/lib/authServer");
+  const { supabaseAdmin } = await import("@/lib/supabaseAdmin");
+
+  const user = await getUserFromRequest(req);
+
+  return { user, supabaseAdmin };
+}
+
+function isAuthErrorLike(error: unknown) {
+  return (
+    error instanceof Error &&
+    (error.message === "Missing auth token" ||
+      error.message === "Invalid auth token")
+  );
+}
 
 function cleanString(value: unknown, fallback = "") {
   if (typeof value !== "string") return fallback;
@@ -27,7 +45,7 @@ function normalizePriority(value: unknown, fallback = 3) {
 
 export async function GET(req: NextRequest) {
   try {
-    const user = await getUserFromRequest(req);
+    const { user, supabaseAdmin } = await getRouteDeps(req);
 
     const { searchParams } = new URL(req.url);
     const projectId = searchParams.get("projectId")?.trim();
@@ -51,7 +69,7 @@ export async function GET(req: NextRequest) {
   } catch (error) {
     console.error("GET TASKS ERROR:", error);
 
-    if (isAuthError(error)) {
+    if (isAuthErrorLike(error)) {
       return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
     }
 
@@ -61,7 +79,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const user = await getUserFromRequest(req);
+    const { user, supabaseAdmin } = await getRouteDeps(req);
     const body = await req.json();
 
     const projectId = cleanString(body.projectId) || null;
@@ -111,7 +129,7 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error("CREATE TASK ERROR:", error);
 
-    if (isAuthError(error)) {
+    if (isAuthErrorLike(error)) {
       return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
     }
 
@@ -121,7 +139,7 @@ export async function POST(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   try {
-    const user = await getUserFromRequest(req);
+    const { user, supabaseAdmin } = await getRouteDeps(req);
     const body = await req.json();
 
     const id = cleanString(body.id);
@@ -184,7 +202,7 @@ export async function PATCH(req: NextRequest) {
   } catch (error) {
     console.error("UPDATE TASK ERROR:", error);
 
-    if (isAuthError(error)) {
+    if (isAuthErrorLike(error)) {
       return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
     }
 
@@ -194,7 +212,7 @@ export async function PATCH(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
-    const user = await getUserFromRequest(req);
+    const { user, supabaseAdmin } = await getRouteDeps(req);
     const body = await req.json();
 
     const id = cleanString(body.id);
@@ -215,7 +233,7 @@ export async function DELETE(req: NextRequest) {
   } catch (error) {
     console.error("DELETE TASK ERROR:", error);
 
-    if (isAuthError(error)) {
+    if (isAuthErrorLike(error)) {
       return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
     }
 

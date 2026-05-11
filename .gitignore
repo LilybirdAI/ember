@@ -45,3 +45,4 @@ node_modules/
 backups/
 *.bak
 .env
+.env*.local

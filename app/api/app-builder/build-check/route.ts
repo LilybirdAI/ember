@@ -7,8 +7,9 @@ import {
   apiUnauthorized,
 } from "@/lib/api";
 import { getUserFromRequest, isAuthError } from "@/lib/authServer";
-import { runGeneratedAppBuildCheck } from "@/lib/appBuilder/buildRunner";
-import { supabaseAdmin } from "@/lib/supabaseAdmin";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 function cleanString(value: unknown, fallback = "") {
   if (typeof value !== "string") return fallback;
@@ -23,6 +24,9 @@ export async function POST(req: Request) {
           "Build Check is disabled for this beta environment. Export ZIP still works.",
       });
     }
+
+    const { supabaseAdmin } = await import("@/lib/supabaseAdmin");
+    const { runGeneratedAppBuildCheck } = await import("@/lib/appBuilder/buildRunner");
 
     const user = await getUserFromRequest(req);
     const body = await req.json();

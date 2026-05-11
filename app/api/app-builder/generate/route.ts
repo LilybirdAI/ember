@@ -1,4 +1,4 @@
-import OpenAI from "openai";
+import { getOpenAIClient } from "@/lib/openai";
 import {
   apiBadRequest,
   apiOk,
@@ -14,10 +14,6 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { checkMonthlyUsageLimit, logUsageEvent } from "@/lib/usage";
 import { createInvoiceTrackerTemplate } from "@/lib/appTemplates/invoiceTrackerTemplate";
 import { createCleaningCrmTemplate } from "@/lib/appTemplates/cleaningCrmTemplate";
-
-const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
 
 type TemplateFile = {
   path: string;
@@ -873,7 +869,7 @@ ${prompt}
     };
   }
 
-  return client.responses.create(responseOptions);
+  return getOpenAIClient().responses.create(responseOptions);
 }
 
 async function ensureProjectBelongsToUser(userId: string, projectId: string | null) {

@@ -6,8 +6,26 @@ import {
   apiServerError,
   apiUnauthorized,
 } from "@/lib/api";
-import { getUserFromRequest, isAuthError } from "@/lib/authServer";
-import { supabaseAdmin } from "@/lib/supabaseAdmin";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+async function getRouteDeps(req: NextRequest) {
+  const { getUserFromRequest } = await import("@/lib/authServer");
+  const { supabaseAdmin } = await import("@/lib/supabaseAdmin");
+
+  const user = await getUserFromRequest(req);
+
+  return { user, supabaseAdmin };
+}
+
+function isAuthErrorLike(error: unknown) {
+  return (
+    error instanceof Error &&
+    (error.message === "Missing auth token" ||
+      error.message === "Invalid auth token")
+  );
+}
 
 function cleanString(value: unknown, fallback = "") {
   if (typeof value !== "string") return fallback;
@@ -16,7 +34,7 @@ function cleanString(value: unknown, fallback = "") {
 
 export async function GET(req: NextRequest) {
   try {
-    const user = await getUserFromRequest(req);
+    const { user, supabaseAdmin } = await getRouteDeps(req);
 
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id")?.trim();
@@ -75,7 +93,7 @@ export async function GET(req: NextRequest) {
   } catch (error) {
     console.error("GET GENERATED APPS ERROR:", error);
 
-    if (isAuthError(error)) {
+    if (isAuthErrorLike(error)) {
       return apiUnauthorized("You need to log in first.");
     }
 
@@ -85,7 +103,7 @@ export async function GET(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
-    const user = await getUserFromRequest(req);
+    const { user, supabaseAdmin } = await getRouteDeps(req);
     const body = await req.json();
 
     const id = cleanString(body.id);
@@ -114,7 +132,7 @@ export async function DELETE(req: NextRequest) {
   } catch (error) {
     console.error("DELETE GENERATED APP ERROR:", error);
 
-    if (isAuthError(error)) {
+    if (isAuthErrorLike(error)) {
       return apiUnauthorized("You need to log in first.");
     }
 
