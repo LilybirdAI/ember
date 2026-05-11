@@ -49,10 +49,38 @@ type RulesResponse = {
   error?: string;
 };
 
+type Correction = {
+  ok?: boolean;
+  time?: string;
+  status?: string;
+  feedbackSignal?: string;
+  feedbackMessage?: string;
+  repeatedCount?: number;
+  confidence?: string;
+  proposedAction?: string;
+  safeToAutoApply?: boolean;
+  target?: {
+    time?: string;
+    message?: string;
+    domain?: string;
+    priority?: string;
+    engine?: string;
+    model?: string;
+    nextMove?: string;
+  } | null;
+};
+
+type CorrectionsResponse = {
+  ok?: boolean;
+  corrections?: Correction[];
+  error?: string;
+};
+
 export default function LearningPage() {
   const [summary, setSummary] = useState<SummaryResponse | null>(null);
   const [events, setEvents] = useState<LearningEvent[]>([]);
   const [rules, setRules] = useState("");
+  const [corrections, setCorrections] = useState<Correction[]>([]);
   const [newRule, setNewRule] = useState("");
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState(false);
@@ -68,23 +96,27 @@ export default function LearningPage() {
     setLoading(true);
 
     try {
-      const [summaryRes, eventsRes, rulesRes] = await Promise.all([
+      const [summaryRes, eventsRes, rulesRes, correctionsRes] = await Promise.all([
         fetch("/api/learning/summary", { cache: "no-store" }),
         fetch("/api/learning/events", { cache: "no-store" }),
         fetch("/api/learning/rules", { cache: "no-store" }),
+        fetch("/api/learning/corrections", { cache: "no-store" }),
       ]);
 
       const summaryJson = (await summaryRes.json()) as SummaryResponse;
       const eventsJson = (await eventsRes.json()) as EventsResponse;
       const rulesJson = (await rulesRes.json()) as RulesResponse;
+      const correctionsJson = (await correctionsRes.json()) as CorrectionsResponse;
 
       if (!summaryRes.ok) throw new Error(summaryJson.error || "Could not load summary.");
       if (!eventsRes.ok) throw new Error(eventsJson.error || "Could not load events.");
       if (!rulesRes.ok) throw new Error(rulesJson.error || "Could not load rules.");
+      if (!correctionsRes.ok) throw new Error(correctionsJson.error || "Could not load corrections.");
 
       setSummary(summaryJson);
       setEvents(eventsJson.events || []);
       setRules(rulesJson.rules || "");
+      setCorrections(correctionsJson.corrections || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not load learning data.");
     } finally {
@@ -110,6 +142,29 @@ export default function LearningPage() {
       await loadLearning();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not run reflection.");
+    } finally {
+      setWorking(false);
+    }
+  }
+
+  async function createCorrection() {
+    setWorking(true);
+    setError("");
+
+    try {
+      const res = await fetch("/api/learning/correct", {
+        method: "POST",
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Could not create correction.");
+      }
+
+      await loadLearning();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not create correction.");
     } finally {
       setWorking(false);
     }
@@ -179,6 +234,14 @@ export default function LearningPage() {
               className="rounded-xl bg-yellow-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-yellow-400 disabled:opacity-50"
             >
               Run Reflection
+            </button>
+
+            <button
+              onClick={createCorrection}
+              disabled={loading || working}
+              className="rounded-xl border border-yellow-500/60 px-4 py-2 text-sm font-semibold text-yellow-300 hover:bg-yellow-500/10 disabled:opacity-50"
+            >
+              Create Self-Correction
             </button>
           </div>
         </header>
@@ -266,6 +329,46 @@ export default function LearningPage() {
                 )}
               </Panel>
             </section>
+
+            <Panel title="Self-Corrections">
+              {corrections.length === 0 ? (
+                <p className="text-sm text-slate-400">No self-corrections created yet.</p>
+              ) : (
+                <div className="space-y-3">
+                  {corrections.slice(-10).reverse().map((correction, index) => (
+                    <div
+                      key={`${correction.time}-${index}`}
+                      className="rounded-xl border border-slate-800 bg-slate-950 p-3"
+                    >
+                      <div className="flex flex-wrap items-center gap-2 text-xs uppercase tracking-wide text-yellow-400">
+                        <span>{correction.status || "correction"}</span>
+                        {correction.confidence && <span>· {correction.confidence}</span>}
+                        {correction.safeToAutoApply === false && <span>· approval required</span>}
+                      </div>
+
+                      <div className="mt-2 text-sm text-slate-200">
+                        {correction.proposedAction || "No proposed action."}
+                      </div>
+
+                      {correction.target && (
+                        <div className="mt-2 text-xs leading-5 text-slate-400">
+                          Target: {correction.target.domain || "unknown"} /{" "}
+                          {correction.target.engine || "unknown"}
+                          <br />
+                          Previous: {correction.target.message || "No target message"}
+                        </div>
+                      )}
+
+                      {correction.feedbackMessage && (
+                        <div className="mt-2 rounded-lg bg-slate-900 p-2 text-xs text-slate-400">
+                          Feedback: “{correction.feedbackMessage}”
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Panel>
 
             <Panel title="Recent Learning Events">
               <div className="space-y-3">
