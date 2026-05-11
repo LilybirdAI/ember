@@ -303,6 +303,7 @@ export default function EmbrPage() {
   const [usage, setUsage] = useState<UsageStatus | null>(null);
   const [loadingUsage, setLoadingUsage] = useState(false);
 
+  const [showOperatorRead, setShowOperatorRead] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       role: "assistant",
@@ -321,6 +322,20 @@ export default function EmbrPage() {
       (conversation) => conversation.project_id === selectedProjectId
     );
   }, [conversations, selectedProjectId]);
+
+  useEffect(() => {
+    const savedDebugMode =
+      sessionStorage.getItem("embr_show_operator_read") === "true";
+
+    setShowOperatorRead(savedDebugMode);
+  }, []);
+
+  useEffect(() => {
+    sessionStorage.setItem(
+      "embr_show_operator_read",
+      showOperatorRead ? "true" : "false"
+    );
+  }, [showOperatorRead]);
 
   useEffect(() => {
     const chatElement = chatScrollRef.current;
@@ -1077,13 +1092,27 @@ export default function EmbrPage() {
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={() => resetChatForProject(activeProject)}
-              className="rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-xs font-semibold text-slate-200 hover:bg-slate-700"
-            >
-              New Chat
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setShowOperatorRead((value) => !value)}
+                className={
+                  showOperatorRead
+                    ? "rounded-lg border border-yellow-500 bg-yellow-500/10 px-3 py-2 text-xs font-semibold text-yellow-300 hover:bg-yellow-500/20"
+                    : "rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-xs font-semibold text-slate-300 hover:bg-slate-700"
+                }
+              >
+                Operator Read {showOperatorRead ? "On" : "Off"}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => resetChatForProject(activeProject)}
+                className="rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-xs font-semibold text-slate-200 hover:bg-slate-700"
+              >
+                New Chat
+              </button>
+            </div>
           </div>
 
           <div
@@ -1159,7 +1188,8 @@ export default function EmbrPage() {
                     </div>
                   )}
 
-                {message.role === "assistant" &&
+                {showOperatorRead &&
+                  message.role === "assistant" &&
                   (message.engine || message.model || message.embrRead) && (
                     <div className="mt-3 rounded-xl border border-slate-700 bg-slate-900/70 px-3 py-2 text-[11px] leading-5 text-slate-400">
                       <div className="mb-1 font-semibold uppercase tracking-wide text-yellow-400">
