@@ -1122,14 +1122,18 @@ export default function EmbrPage() {
 
                 {message.role === "assistant" &&
                   getDisplaySources(message).length > 0 && (
-                    <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] leading-5 text-slate-400">
-                      <span className="font-semibold uppercase tracking-wide text-emerald-400">
-                        Sources:
+                    <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[10px] leading-4 text-slate-500">
+                      <span className="mr-1 inline-flex items-center gap-1 uppercase tracking-wide text-slate-500">
+                        <span aria-hidden="true">↗</span>
+                        Sources
                       </span>
 
                       {getDisplaySources(message).map((source, sourceIndex) => {
                         const title = getSourceTitle(source, sourceIndex);
                         const url = getSourceUrl(source);
+
+                        const shortTitle =
+                          title.length > 22 ? `${title.slice(0, 22)}…` : title;
 
                         return url ? (
                           <a
@@ -1138,16 +1142,19 @@ export default function EmbrPage() {
                             target="_blank"
                             rel="noreferrer"
                             title={title}
-                            className="rounded-full border border-slate-700 bg-slate-900 px-2 py-1 text-emerald-300 underline-offset-2 hover:border-emerald-500 hover:underline"
+                            className="inline-flex items-center gap-1 rounded-full border border-slate-800 bg-slate-950/60 px-1.5 py-0.5 text-slate-400 hover:border-emerald-500/60 hover:text-emerald-300"
                           >
-                            [{sourceIndex + 1}] {title}
+                            <span aria-hidden="true">🔗</span>
+                            <span>[{sourceIndex + 1}] {shortTitle}</span>
                           </a>
                         ) : (
                           <span
                             key={`${title}-${sourceIndex}`}
-                            className="rounded-full border border-slate-700 bg-slate-900 px-2 py-1 text-slate-300"
+                            title={title}
+                            className="inline-flex items-center gap-1 rounded-full border border-slate-800 bg-slate-950/60 px-1.5 py-0.5 text-slate-500"
                           >
-                            [{sourceIndex + 1}] {title}
+                            <span aria-hidden="true">•</span>
+                            <span>[{sourceIndex + 1}] {shortTitle}</span>
                           </span>
                         );
                       })}
