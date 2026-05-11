@@ -113,6 +113,7 @@ type ProfileResponse = {
     state?: string;
     updatedAt?: string;
     facts?: Record<string, string>;
+    preferences?: Record<string, string>;
   };
   error?: string;
 };
@@ -567,6 +568,23 @@ export default function LearningPage() {
                     <span className="text-slate-200">
                       {profile?.updatedAt || "Unknown"}
                     </span>
+                  </div>
+
+                  <div className="rounded-xl bg-slate-950 px-3 py-2">
+                    <div className="mb-2 text-slate-500">Preference Memory:</div>
+
+                    {profile?.preferences && Object.keys(profile.preferences).length > 0 ? (
+                      <div className="space-y-1">
+                        {Object.entries(profile.preferences).map(([key, value]) => (
+                          <div key={key} className="text-xs leading-5">
+                            <span className="text-yellow-400">{key}:</span>{" "}
+                            <span className="text-slate-300">{value}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-xs text-slate-400">No preferences saved.</div>
+                    )}
                   </div>
 
                   <button
