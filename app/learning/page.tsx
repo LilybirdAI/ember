@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { supabaseBrowser } from "@/lib/supabaseBrowser";
 
 type LearningEvent = {
   time?: string;
@@ -143,6 +144,21 @@ export default function LearningPage() {
     };
   }
 
+  async function learningHeadersWithAuth() {
+    const headers: Record<string, string> = {
+      ...learningHeaders(),
+    };
+
+    const { data } = await supabaseBrowser.auth.getSession();
+    const token = data.session?.access_token;
+
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+
+    return headers;
+  }
+
   async function loadLearning() {
     if (!dashboardKey) {
       setLoading(false);
@@ -153,6 +169,8 @@ export default function LearningPage() {
     setLoading(true);
 
     try {
+      const profileHeaders = await learningHeadersWithAuth();
+
       const [
         summaryRes,
         eventsRes,
@@ -183,7 +201,7 @@ export default function LearningPage() {
         }),
         fetch("/api/learning/profile", {
           cache: "no-store",
-          headers: learningHeaders(),
+          headers: profileHeaders,
         }),
       ]);
 
@@ -259,7 +277,7 @@ export default function LearningPage() {
     try {
       const res = await fetch("/api/learning/profile", {
         method: "DELETE",
-        headers: learningHeaders(),
+        headers: await learningHeadersWithAuth(),
       });
 
       const data = await res.json();
