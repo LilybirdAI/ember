@@ -1,7 +1,23 @@
+import { getUserFromRequest, isAuthError } from "@/lib/authServer";
+
 export const runtime = "nodejs";
 
 const EMBR_SERVER_URL =
   process.env.EMBR_SERVER_URL || "http://142.93.204.154:3001";
+
+async function getOptionalUserId(request: Request) {
+  try {
+    const user = await getUserFromRequest(request);
+    return user?.id || null;
+  } catch (error) {
+    if (isAuthError(error)) {
+      return null;
+    }
+
+    console.warn("Could not resolve Embr user id:", error);
+    return null;
+  }
+}
 
 export async function GET() {
   try {
@@ -34,13 +50,23 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
+    const userId = await getOptionalUserId(request);
+
+    const forwardedBody = userId
+      ? {
+          ...body,
+          userId,
+          profileUserId: userId,
+        }
+      : body;
 
     const upstream = await fetch(`${EMBR_SERVER_URL}/respond`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        ...(userId ? { "x-embr-user-id": userId } : {}),
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify(forwardedBody),
     });
 
     const text = await upstream.text();
