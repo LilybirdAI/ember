@@ -819,8 +819,8 @@ export default function EmbrPage() {
 
   return (
     <main className="min-h-screen bg-slate-950 text-white p-4 xl:p-6">
-      <div className="mx-auto grid max-w-[1600px] grid-cols-1 gap-4 xl:h-[88vh] xl:grid-cols-[300px_minmax(0,1fr)]">
-        <aside className="rounded-xl border border-slate-800 bg-slate-900 p-4 xl:h-full xl:overflow-y-auto">
+      <div className="mx-auto grid max-w-[1600px] grid-cols-1 gap-4 xl:h-[88vh] xl:grid-cols-[260px_minmax(0,1fr)]">
+        <aside className="rounded-xl border border-slate-800 bg-slate-900 p-3 xl:h-full xl:overflow-y-auto">
           <h1 className="text-2xl font-bold text-yellow-400">Embr</h1>
 
           <div className="mt-1 truncate text-xs text-slate-500">
@@ -879,7 +879,7 @@ export default function EmbrPage() {
               </select>
             </div>
 
-            <div>
+            <div className="hidden">
               <div className="mb-2 text-xs uppercase tracking-widest text-slate-500">
                 AI Power
               </div>
@@ -955,7 +955,7 @@ export default function EmbrPage() {
             )}
           </section>
 
-          <section className="mt-4 rounded-xl border border-slate-800 bg-slate-950 p-4">
+          <section className="hidden">
             <div className="mb-2 flex items-center justify-between">
               <div className="text-sm font-semibold text-slate-200">
                 Monthly Usage
@@ -1002,7 +1002,7 @@ export default function EmbrPage() {
           <section className="mt-4 rounded-xl border border-slate-800 bg-slate-950 p-4">
             <div className="mb-3 flex items-center justify-between">
               <div className="text-sm font-semibold text-slate-200">
-                Conversations
+                Recent Chats
               </div>
 
               <button
