@@ -859,27 +859,12 @@ export default function EmbrPage() {
               </div>
             )}
 
-            <div>
+            <div className="hidden">
               <div className="mb-2 text-xs uppercase tracking-widest text-slate-500">
                 Mode
               </div>
-              
-
-              <select
-                value={projectType}
-                onChange={(e) => setProjectType(e.target.value as ProjectType)}
-                className="w-full rounded-lg border border-slate-700 bg-slate-800 p-3 text-sm outline-none"
-              >
-                <option value="general">General</option>
-                <option value="business">Business</option>
-                <option value="technical">Technical</option>
-                <option value="research">Research</option>
-                <option value="writing">Writing</option>
-                <option value="life">Life</option>
-              </select>
             </div>
-
-            <div className="hidden">
+<div className="hidden">
               <div className="mb-2 text-xs uppercase tracking-widest text-slate-500">
                 AI Power
               </div>
