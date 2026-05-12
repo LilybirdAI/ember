@@ -299,6 +299,7 @@ export default function EmbrPage() {
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loadingConversations, setLoadingConversations] = useState(false);
+  const [showRecentChats, setShowRecentChats] = useState(false);
 
   const [usage, setUsage] = useState<UsageStatus | null>(null);
   const [loadingUsage, setLoadingUsage] = useState(false);
@@ -985,21 +986,39 @@ export default function EmbrPage() {
           </section>
 
           <section className="mt-4 rounded-xl border border-slate-800 bg-slate-950 p-4">
-            <div className="mb-3 flex items-center justify-between">
-              <div className="text-sm font-semibold text-slate-200">
-                Recent Chats
-              </div>
-
+            <div className="mb-3 flex items-center justify-between gap-2">
               <button
                 type="button"
-                onClick={loadConversations}
-                className="text-xs text-yellow-400 hover:text-yellow-300"
+                onClick={() => setShowRecentChats((value) => !value)}
+                className="flex min-w-0 items-center gap-2 text-sm font-semibold text-slate-200 hover:text-yellow-300"
               >
-                Refresh
+                <span className="text-slate-500">
+                  {showRecentChats ? "▾" : "▸"}
+                </span>
+                <span>Recent Chats</span>
+                <span className="text-xs font-normal text-slate-500">
+                  {visibleConversations.length}
+                </span>
               </button>
+
+              {showRecentChats && (
+                <button
+                  type="button"
+                  onClick={loadConversations}
+                  className="text-xs text-yellow-400 hover:text-yellow-300"
+                >
+                  Refresh
+                </button>
+              )}
             </div>
 
-            <div className="max-h-[520px] space-y-2 overflow-y-auto pr-1">
+            <div
+              className={
+                showRecentChats
+                  ? "max-h-[360px] space-y-2 overflow-y-auto pr-1"
+                  : "hidden"
+              }
+            >
               {loadingConversations && (
                 <div className="rounded-lg bg-slate-800 p-3 text-sm text-slate-400">
                   Loading conversations...
@@ -1020,8 +1039,8 @@ export default function EmbrPage() {
                     key={conversation.id}
                     className={
                       active
-                        ? "rounded-lg border border-yellow-500 bg-yellow-500/10 p-3"
-                        : "rounded-lg border border-slate-800 bg-slate-800 p-3 hover:bg-slate-700"
+                        ? "group rounded-lg border border-yellow-500 bg-yellow-500/10 p-3"
+                        : "group rounded-lg border border-slate-800 bg-slate-800 p-3 hover:bg-slate-700"
                     }
                   >
                     <button
@@ -1042,7 +1061,7 @@ export default function EmbrPage() {
                     <button
                       type="button"
                       onClick={() => deleteConversation(conversation.id)}
-                      className="mt-2 text-xs text-red-300 hover:text-red-200"
+                      className="mt-2 hidden text-xs text-red-300 hover:text-red-200 group-hover:inline-block"
                     >
                       Delete
                     </button>
