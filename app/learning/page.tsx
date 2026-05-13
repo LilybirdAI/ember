@@ -107,6 +107,8 @@ type AppliedCorrectionsResponse = {
 type ProfileResponse = {
   ok?: boolean;
   profile?: {
+    appId?: string;
+    userId?: string;
     name?: string;
     location?: string;
     city?: string;
@@ -551,6 +553,18 @@ export default function LearningPage() {
                 )}
 
                 <div className="space-y-3 text-sm">
+                  <div className="rounded-xl bg-slate-950 px-3 py-2">
+                    <span className="text-slate-500">App ID:</span>{" "}
+                    <span className="text-slate-200">{profile?.appId || "Unknown"}</span>
+                  </div>
+
+                  <div className="rounded-xl bg-slate-950 px-3 py-2">
+                    <span className="text-slate-500">User ID:</span>{" "}
+                    <span className="text-slate-200 break-all">
+                      {profile?.userId || "Unknown"}
+                    </span>
+                  </div>
+
                   <div className="rounded-xl bg-slate-950 px-3 py-2">
                     <span className="text-slate-500">Name:</span>{" "}
                     <span className="text-slate-200">{profile?.name || "Not saved"}</span>
