@@ -829,6 +829,14 @@ export default function EmbrPage() {
           </div>
 
           <div className="mt-5 space-y-3">
+            <button
+              type="button"
+              onClick={() => resetChatForProject(activeProject)}
+              className="w-full rounded-lg bg-yellow-500 px-3 py-3 text-sm font-bold text-black hover:bg-yellow-400"
+            >
+              + New Chat
+            </button>
+
             <div>
               <div className="mb-2 text-xs uppercase tracking-widest text-slate-500">
                 Active Workspace
@@ -865,7 +873,7 @@ export default function EmbrPage() {
                 Mode
               </div>
             </div>
-<div className="hidden">
+            <div className="hidden">
               <div className="mb-2 text-xs uppercase tracking-widest text-slate-500">
                 AI Power
               </div>
@@ -886,22 +894,14 @@ export default function EmbrPage() {
             </div>
           </div>
 
-          <section className="mt-5 rounded-xl border border-slate-800 bg-slate-950 p-3">
+          <section className="mt-5 rounded-xl border border-slate-800/80 bg-slate-950/70 p-3">
             <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => setShowProjectTools((current) => !current)}
-                className="flex-1 rounded-lg border border-yellow-500/40 bg-yellow-500/10 px-3 py-2 text-sm font-semibold text-yellow-400 hover:bg-yellow-500/20"
+                className="flex-1 rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm font-semibold text-slate-200 hover:bg-slate-700"
               >
-                {showProjectTools ? "Hide Project Tools" : "+ New Workspace"}
-              </button>
-
-              <button
-                type="button"
-                onClick={loadProjects}
-                className="rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-xs font-semibold text-slate-300 hover:bg-slate-700"
-              >
-                Refresh
+                {showProjectTools ? "Hide Workspace Tools" : "+ New Workspace"}
               </button>
             </div>
 
@@ -936,6 +936,14 @@ export default function EmbrPage() {
                   className="w-full rounded-lg bg-yellow-500 px-3 py-2 text-sm font-bold text-black disabled:opacity-50"
                 >
                   {creatingProject ? "Creating..." : "Create Project"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={loadProjects}
+                  className="w-full rounded-lg border border-slate-700 px-3 py-2 text-xs font-semibold text-slate-300 hover:bg-slate-800"
+                >
+                  Refresh Workspaces
                 </button>
               </div>
             )}
@@ -985,18 +993,18 @@ export default function EmbrPage() {
             )}
           </section>
 
-          <section className="mt-4 rounded-xl border border-slate-800 bg-slate-950 p-4">
+          <section className="mt-4 border-t border-slate-800 pt-4">
             <div className="mb-3 flex items-center justify-between gap-2">
               <button
                 type="button"
                 onClick={() => setShowRecentChats((value) => !value)}
-                className="flex min-w-0 items-center gap-2 text-sm font-semibold text-slate-200 hover:text-yellow-300"
+                className="flex min-w-0 items-center gap-2 text-sm font-semibold text-slate-300 hover:text-yellow-300"
               >
                 <span className="text-slate-500">
                   {showRecentChats ? "▾" : "▸"}
                 </span>
                 <span>Recent Chats</span>
-                <span className="text-xs font-normal text-slate-500">
+                <span className="rounded-full bg-slate-800 px-2 py-0.5 text-xs font-normal text-slate-400">
                   {visibleConversations.length}
                 </span>
               </button>
@@ -1052,16 +1060,15 @@ export default function EmbrPage() {
                         {conversation.title}
                       </div>
 
-                      <div className="mt-1 flex items-center justify-between gap-2 text-xs text-slate-500">
-                        <span>{conversation.project_type}</span>
-                        <span>{formatDate(conversation.updated_at)}</span>
+                      <div className="mt-1 text-xs text-slate-500">
+                        {formatDate(conversation.updated_at)}
                       </div>
                     </button>
 
                     <button
                       type="button"
                       onClick={() => deleteConversation(conversation.id)}
-                      className="mt-2 hidden text-xs text-red-300 hover:text-red-200 group-hover:inline-block"
+                      className="mt-2 hidden text-xs text-red-300 hover:text-red-200 group-hover:inline-block group-focus-within:inline-block"
                     >
                       Delete
                     </button>
