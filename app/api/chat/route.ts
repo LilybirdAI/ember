@@ -41,6 +41,20 @@ export async function GET() {
       );
     }
 
+    try {
+      JSON.parse(text || "{}");
+    } catch {
+      return Response.json(
+        {
+          ok: false,
+          error: "Embr server returned invalid JSON.",
+          status: upstream.status,
+          bodyPreview: text.slice(0, 500),
+        },
+        { status: upstream.ok ? 502 : upstream.status }
+      );
+    }
+
     return new Response(text, {
       status: upstream.status,
       headers: {
@@ -90,6 +104,20 @@ export async function POST(request: Request) {
         {
           ok: false,
           error: "Embr server returned a non-JSON response.",
+          status: upstream.status,
+          bodyPreview: text.slice(0, 500),
+        },
+        { status: upstream.ok ? 502 : upstream.status }
+      );
+    }
+
+    try {
+      JSON.parse(text || "{}");
+    } catch {
+      return Response.json(
+        {
+          ok: false,
+          error: "Embr server returned invalid JSON.",
           status: upstream.status,
           bodyPreview: text.slice(0, 500),
         },

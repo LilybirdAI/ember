@@ -289,6 +289,10 @@ function getFriendlyErrorMessage(error: unknown) {
     return "Embr’s server returned an invalid response. Check the terminal logs.";
   }
 
+  if (lower.includes("invalid json")) {
+    return "Embr’s server returned an invalid response. Check the terminal logs.";
+  }
+
   if (lower.includes("image")) {
     return "Embr had trouble reading that image. Try a smaller PNG, JPEG, or WebP.";
   }
@@ -727,7 +731,11 @@ export default function EmbrPage() {
     if ((!input.trim() && selectedImages.length === 0) || loading) return;
 
     const userMessage = input.trim();
-    const displayLife = userMessage || "[Images uploaded]";
+    const displayLife =
+      userMessage ||
+      (selectedImages.length === 1
+        ? "Image uploaded"
+        : `${selectedImages.length} images uploaded`);
     const imagePreviewsForMessage = selectedImages.map((image) => image.preview);
 
     const nextMessages: ChatMessage[] = [
