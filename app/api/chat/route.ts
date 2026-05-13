@@ -27,11 +27,24 @@ export async function GET() {
     });
 
     const text = await upstream.text();
+    const contentType = upstream.headers.get("content-type") || "";
+
+    if (!contentType.includes("application/json")) {
+      return Response.json(
+        {
+          ok: false,
+          error: "Embr server returned a non-JSON response.",
+          status: upstream.status,
+          bodyPreview: text.slice(0, 500),
+        },
+        { status: upstream.ok ? 502 : upstream.status }
+      );
+    }
 
     return new Response(text, {
       status: upstream.status,
       headers: {
-        "Content-Type": upstream.headers.get("content-type") || "application/json",
+        "Content-Type": "application/json",
       },
     });
   } catch (error) {
@@ -70,11 +83,24 @@ export async function POST(request: Request) {
     });
 
     const text = await upstream.text();
+    const contentType = upstream.headers.get("content-type") || "";
+
+    if (!contentType.includes("application/json")) {
+      return Response.json(
+        {
+          ok: false,
+          error: "Embr server returned a non-JSON response.",
+          status: upstream.status,
+          bodyPreview: text.slice(0, 500),
+        },
+        { status: upstream.ok ? 502 : upstream.status }
+      );
+    }
 
     return new Response(text, {
       status: upstream.status,
       headers: {
-        "Content-Type": upstream.headers.get("content-type") || "application/json",
+        "Content-Type": "application/json",
       },
     });
   } catch (error) {

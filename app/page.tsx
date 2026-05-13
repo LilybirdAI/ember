@@ -220,21 +220,48 @@ async function parseJsonResponse(res: Response) {
 
 function fileToDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
-    const reader = new FileReader();
+    const image = new Image();
+    const objectUrl = URL.createObjectURL(file);
 
-    reader.onload = () => {
-      const result = reader.result;
+    image.onload = () => {
+      try {
+        const maxSize = 1280;
+        const scale = Math.min(
+          1,
+          maxSize / Math.max(image.width, image.height)
+        );
 
-      if (typeof result === "string") {
-        resolve(result);
-        return;
+        const width = Math.max(1, Math.round(image.width * scale));
+        const height = Math.max(1, Math.round(image.height * scale));
+
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+
+        const context = canvas.getContext("2d");
+
+        if (!context) {
+          throw new Error("Could not prepare image compression.");
+        }
+
+        context.drawImage(image, 0, 0, width, height);
+
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.75);
+
+        URL.revokeObjectURL(objectUrl);
+        resolve(dataUrl);
+      } catch (error) {
+        URL.revokeObjectURL(objectUrl);
+        reject(error);
       }
-
-      reject(new Error("Failed to read image."));
     };
 
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
+    image.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error("Failed to load image for compression."));
+    };
+
+    image.src = objectUrl;
   });
 }
 
