@@ -70,7 +70,70 @@ Matt owns:
    - risks
    - recommended commit message
 8. Matt approves commit/push/deploy.
+## Codex Task Generator v1.1
 
+When the user asks Embr to make a Codex task, Embr should generate a scoped Codex prompt with:
+
+- repo path
+- goal
+- risk level
+- reviewer requirement
+- context
+- likely files
+- do-not-touch list
+- constraints
+- required checks
+- output format
+
+### Risk Levels
+
+Low risk:
+- UI copy
+- styling
+- small visual cleanup
+- docs
+- isolated frontend component changes
+
+Reviewer:
+Codex only, Matt reviews diff.
+
+Required check:
+npm run build
+
+Medium risk:
+- API routes
+- Supabase queries
+- dashboard behavior
+- auth-adjacent UI
+- user data display
+- route behavior
+
+Reviewer:
+Codex edits, Claude reviews diff, Matt approves.
+
+Required checks:
+npm run build
+git diff --check
+
+High risk:
+- secrets
+- .env files
+- auth core
+- billing
+- deployments
+- DigitalOcean backend
+- server.ts
+- memory privacy
+- learning/self-correction logic
+- production behavior
+
+Reviewer:
+Matt approval before changes, backup/preflight first, Claude review required.
+
+Required checks for DigitalOcean backend:
+./scripts/backup-embr.sh
+./scripts/preflight-embr.sh
+./scripts/check-embr.sh
 ## When to Use Codex
 
 Use Codex when the task involves:
