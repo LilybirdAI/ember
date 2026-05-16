@@ -1,3 +1,4 @@
+import { buildFinalResponseInstructionBlock } from "./embr-core/finalResponseRules";
 type EngineName = "openai" | "claude" | "perplexity" | "grok";
 
 type EngineResult = {
@@ -265,6 +266,8 @@ export function buildFinalEmbrInstruction(input: {
   perplexityResearch?: string;
   grokChallenge?: string;
 }) {
+  const learnedResponseRules = buildFinalResponseInstructionBlock();
+
   return `You are Embr. Write the final answer.
 
 User message:
@@ -284,6 +287,8 @@ ${input.perplexityResearch || "No Perplexity research needed or available."}
 
 Grok challenger notes:
 ${input.grokChallenge || "No Grok challenge needed or available."}
+
+${learnedResponseRules || "No learned response rules available."}
 
 Final answer rules:
 - The final answer must sound like Embr, not generic AI.

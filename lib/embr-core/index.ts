@@ -15,7 +15,24 @@ export { deriveFeelingState } from "./feelingState";
 export { chooseVoiceStyle } from "./voiceStyle";
 export { thinkAsEmbr } from "./embrBrain";
 export { composeEmbrResponse } from "./responseComposer";
+export { getActiveBehaviorRules, defaultBehaviorRules } from "./behaviorRules";
+export type { EmbrBehaviorRule } from "./behaviorRules";
 
+export {
+  getFinalResponseRules,
+  buildFinalResponseInstructionBlock
+} from "./finalResponseRules";
+export type { EmbrFinalResponseRules } from "./finalResponseRules";
+
+export {
+  getReflectionMemory,
+  addReflection,
+  reflectionFromLearningEvent
+} from "./reflectionMemory";
+export type { EmbrReflection } from "./reflectionMemory";
+
+export { createLearningEvent } from "./learningEvent";
+export type { EmbrLearningEvent } from "./learningEvent";
 export type { EmbrSignal } from "./signalDetector";
 export type { EmbrContextEnhancement } from "./contextEnhancer";
 export type { EmbrPostureProfile } from "./postureSelector";

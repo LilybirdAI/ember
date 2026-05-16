@@ -779,7 +779,7 @@ export default function EmbrPage() {
       });
 
       const data = await parseJsonResponse(res);
-
+      const isDebugMode = process.env.NEXT_PUBLIC_EMBR_DEBUG === "true";
       if (!res.ok) {
         throw new Error(data.output || data.error || `API error: ${res.status}`);
       }
@@ -788,22 +788,27 @@ export default function EmbrPage() {
         setConversationId(data.conversationId);
       }
 
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content: data.response || data.content || data.text || data.output || "No response returned.",
-          engine: data.engine,
-          model: data.model,
-          embrRead: data.embrRead,
-          citations: Array.isArray(data.citations) ? data.citations : [],
-          searchResults: Array.isArray(data.search_results)
-            ? data.search_results
-            : Array.isArray(data.searchResults)
-              ? data.searchResults
-              : [],
-        },
-      ]);
+setMessages((prev) => [
+  ...prev,
+  {
+    role: "assistant",
+    content:
+      data.response ||
+      data.content ||
+      data.text ||
+      data.output ||
+      "No response returned.",
+    engine: isDebugMode ? data.engine : undefined,
+    model: isDebugMode ? data.model : undefined,
+    embrRead: isDebugMode ? data.embrRead : undefined,
+    citations: Array.isArray(data.citations) ? data.citations : [],
+    searchResults: Array.isArray(data.search_results)
+      ? data.search_results
+      : Array.isArray(data.searchResults)
+        ? data.searchResults
+        : [],
+  },
+]);
 
       clearSelectedImages(false);
 
@@ -824,30 +829,71 @@ export default function EmbrPage() {
   }
 
   useEffect(() => {
-    async function initAuth() {
-      const { data } = await supabaseBrowser.auth.getSession();
+    let cancelled = false;
 
-      if (!data.session) {
-        router.replace("/login");
-        return;
+    const authFallbackTimer = window.setTimeout(() => {
+      if (!cancelled) {
+        console.warn("Auth loading timed out.");
+        setAuthLoading(false);
       }
+    }, 8000);
 
-      setUserEmail(data.session.user.email || null);
-      setAuthLoading(false);
+    async function initAuth() {
+      try {
+        const { data, error } = await supabaseBrowser.auth.getSession();
 
-      await Promise.all([loadConversations(), loadUsage(), loadProjects()]);
+        window.clearTimeout(authFallbackTimer);
+
+        if (error) {
+          console.error("Auth session error:", error);
+        }
+
+        if (!data.session) {
+          if (!cancelled) {
+            setAuthLoading(false);
+            router.replace("/login");
+          }
+          return;
+        }
+
+        if (cancelled) return;
+
+        setUserEmail(data.session.user.email || null);
+        setAuthLoading(false);
+
+        await Promise.allSettled([
+          loadConversations(),
+          loadUsage(),
+          loadProjects(),
+        ]);
+      } catch (error) {
+        window.clearTimeout(authFallbackTimer);
+
+        console.error("Auth init failed:", error);
+
+        if (!cancelled) {
+          setAuthLoading(false);
+          router.replace("/login");
+        }
+      }
     }
 
     initAuth();
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(authFallbackTimer);
+    };
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [router]);
 
   if (authLoading) {
     return (
       <main className="min-h-screen bg-slate-950 text-white p-6 flex items-center justify-center">
         <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6 text-center">
           <h1 className="text-3xl font-bold text-yellow-400 mb-2">Embr</h1>
-          <p className="text-slate-400">Loading your workspace...</p>
+          <p className="text-slate-400">Loading your workspace... CLEAN TEST 123</p>
         </div>
       </main>
     );
@@ -929,17 +975,6 @@ export default function EmbrPage() {
             </div>
           </div>
 
-          <section className="mt-5 rounded-xl border border-slate-800/80 bg-slate-950/70 p-3">
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setShowProjectTools((current) => !current)}
-                className="flex-1 rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm font-semibold text-slate-200 hover:bg-slate-700"
-              >
-                {showProjectTools ? "Hide Workspace Tools" : "+ New Workspace"}
-              </button>
-            </div>
-
             {showProjectTools && (
               <div className="mt-3 space-y-2">
                 <input
@@ -982,7 +1017,6 @@ export default function EmbrPage() {
                 </button>
               </div>
             )}
-          </section>
 
           <section className="hidden">
             <div className="mb-2 flex items-center justify-between">
@@ -1127,7 +1161,7 @@ export default function EmbrPage() {
         <section className="flex min-h-[70vh] flex-col rounded-xl border border-slate-800 bg-slate-900 p-4 xl:h-full">
           <div className="mb-4 flex items-center justify-between gap-4">
             <div>
-              <div className="text-lg font-semibold">Embr Core</div>
+              <div className="text-lg font-semibold">Embr </div>
 
               <div className="text-xs text-slate-500">
                 {activeProject
@@ -1137,18 +1171,7 @@ export default function EmbrPage() {
                     : "New conversation"}
               </div>
             </div>
-
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => resetChatForProject(activeProject)}
-                className="rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-xs font-semibold text-slate-200 hover:bg-slate-700"
-              >
-                New Chat
-              </button>
-            </div>
           </div>
-
           <div
             ref={chatScrollRef}
             className="mb-4 flex-1 space-y-4 overflow-y-auto pr-1"

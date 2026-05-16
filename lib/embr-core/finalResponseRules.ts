@@ -1,4 +1,5 @@
 import { getActiveBehaviorRules, type EmbrBehaviorRule } from "./behaviorRules";
+import { getReflectionMemory } from "./reflectionMemory";
 
 export type EmbrFinalResponseRules = {
   rules: EmbrBehaviorRule[];
@@ -16,13 +17,19 @@ export function getFinalResponseRules(scope?: EmbrBehaviorRule["scope"]): EmbrFi
 
 export function buildFinalResponseInstructionBlock(scope?: EmbrBehaviorRule["scope"]): string {
   const { instructions } = getFinalResponseRules(scope);
+  const reflections = getReflectionMemory();
 
-  if (instructions.length === 0) {
+  const lines = [
+    ...instructions.map((instruction) => `- ${instruction}`),
+    ...reflections.map((reflection) => `- Learned: ${reflection.lesson}`)
+  ];
+
+  if (lines.length === 0) {
     return "";
   }
 
   return [
     "Embr final response rules:",
-    ...instructions.map((instruction) => `- ${instruction}`)
-  ].join("\\n");
+    ...lines
+  ].join("\n");
 }

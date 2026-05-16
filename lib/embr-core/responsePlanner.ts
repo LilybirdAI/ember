@@ -62,20 +62,20 @@ export function createResponsePlan(
     };
   }
 
-  if (signal.nextMove === "ask_clarifying_question") {
-    return {
-      firstMove: "Ask one focused clarifying question.",
-      structure: [
-        "Avoid overwhelming the user",
-        "Ask only what is needed",
-        "Explain why the question matters"
-      ],
-      shouldAskQuestion: true,
-      shouldUseOutsideModel: false,
-      shouldCreateArtifact: false,
-      riskLevel: "low"
-    };
-  }
+   if (signal.nextMove === "ask_clarifying_question") {
+  return {
+    firstMove: "Give a helpful first answer before asking for refinement.",
+    structure: [
+      "Answer directly first",
+      "Keep the response calm and useful",
+      "Ask one natural follow-up question only if needed"
+    ],
+    shouldAskQuestion: false,
+    shouldUseOutsideModel: false,
+    shouldCreateArtifact: false,
+    riskLevel: "low"
+  };
+}
 
   if (signal.nextMove === "route_to_model") {
     return {
