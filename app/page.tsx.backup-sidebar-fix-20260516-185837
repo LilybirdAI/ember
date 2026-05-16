@@ -1,0 +1,1349 @@
+"use client";
+
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { supabaseBrowser } from "@/lib/supabaseBrowser";
+
+type SourceItem =
+  | string
+  | {
+      title?: string;
+      url?: string;
+      snippet?: string;
+      description?: string;
+    };
+
+type ChatMessage = {
+  role: "user" | "assistant";
+  content: string;
+  imagePreviews?: string[];
+  engine?: string;
+  model?: string;
+  embrRead?: {
+    domain?: string;
+    skill?: string;
+    priority?: string;
+    voice?: string;
+    nextMove?: string;
+  };
+  citations?: SourceItem[];
+  searchResults?: SourceItem[];
+};
+
+function normalizeSourceUrl(url: string) {
+  return url.trim().replace(/\/$/, "").toLowerCase();
+}
+
+function getSourceDomain(url: string) {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "").toLowerCase();
+  } catch {
+    return "";
+  }
+}
+
+function isBareUrlSource(source: SourceItem) {
+  return typeof source === "string" && /^https?:\/\//i.test(source);
+}
+
+function getSourceKey(source: SourceItem) {
+  if (typeof source === "string") {
+    return normalizeSourceUrl(source);
+  }
+
+  if (source.url) {
+    return normalizeSourceUrl(source.url);
+  }
+
+  return (source.title || source.snippet || source.description || "")
+    .trim()
+    .toLowerCase();
+}
+
+function dedupeSources(sources: SourceItem[]) {
+  const seenKeys = new Set<string>();
+  const seenDomains = new Set<string>();
+  const result: SourceItem[] = [];
+
+  for (const source of sources) {
+    const key = getSourceKey(source);
+    const url = typeof source === "string" ? source : source.url || "";
+    const domain = url ? getSourceDomain(url) : "";
+
+    if (!key) continue;
+
+    // If a titled search result already exists for a domain,
+    // hide the later bare citation URL for that same domain.
+    if (isBareUrlSource(source) && domain && seenDomains.has(domain)) {
+      continue;
+    }
+
+    if (seenKeys.has(key)) continue;
+
+    seenKeys.add(key);
+    if (domain) seenDomains.add(domain);
+
+    result.push(source);
+  }
+
+  return result;
+}
+
+function getSourceTitle(source: SourceItem, index: number) {
+  if (typeof source === "string") {
+    try {
+      const url = new URL(source);
+      return url.hostname.replace(/^www\./, "");
+    } catch {
+      return `Source ${index + 1}`;
+    }
+  }
+
+  if (source.title) {
+    return source.title
+      .replace(/\s+/g, " ")
+      .replace(/\s[-|]\s.*$/, "")
+      .trim();
+  }
+
+  if (source.url) {
+    try {
+      const url = new URL(source.url);
+      return url.hostname.replace(/^www\./, "");
+    } catch {
+      return source.url;
+    }
+  }
+
+  return `Source ${index + 1}`;
+}
+
+function getSourceUrl(source: SourceItem) {
+  return typeof source === "string" ? source : source.url || "";
+}
+
+function getDisplaySources(message: ChatMessage) {
+  const titledSources = dedupeSources(message.searchResults || []).filter(
+    (source) => typeof source !== "string"
+  );
+
+  if (titledSources.length > 0) {
+    return titledSources.slice(0, 3);
+  }
+
+  return dedupeSources(message.citations || []).slice(0, 3);
+}
+
+type SelectedImage = {
+  id: string;
+  file: File;
+  preview: string;
+};
+
+type ProjectType =
+  | "business"
+  | "technical"
+  | "research"
+  | "writing"
+  | "life"
+  | "general";
+
+type AIMode = "auto" | "light" | "heavy";
+
+type Conversation = {
+  id: string;
+  title: string;
+  project_type: ProjectType;
+  project_id: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+type Project = {
+  id: string;
+  name: string;
+  type: ProjectType;
+  summary: string | null;
+  status: string;
+  created_at: string;
+  updated_at: string;
+};
+
+type UsageStatus = {
+  used: number;
+  limit: number;
+  remaining: number;
+};
+
+const projectTypes: ProjectType[] = [
+  "general",
+  "business",
+  "technical",
+  "research",
+  "writing",
+  "life",
+];
+
+function isProjectType(value: unknown): value is ProjectType {
+  return typeof value === "string" && projectTypes.includes(value as ProjectType);
+}
+
+function formatDate(value: string) {
+  return new Date(value).toLocaleString([], {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function formatTokens(value: number) {
+  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
+  if (value >= 1_000) return `${Math.round(value / 1_000)}K`;
+  return `${value}`;
+}
+
+async function parseJsonResponse(res: Response) {
+  const rawText = await res.text();
+
+  try {
+    return rawText ? JSON.parse(rawText) : {};
+  } catch {
+    throw new Error(
+      `API returned non-JSON response. Status: ${res.status}. Body: ${rawText.slice(
+        0,
+        500
+      )}`
+    );
+  }
+}
+
+function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    const objectUrl = URL.createObjectURL(file);
+
+    image.onload = () => {
+      try {
+        const maxSize = 1280;
+        const scale = Math.min(
+          1,
+          maxSize / Math.max(image.width, image.height)
+        );
+
+        const width = Math.max(1, Math.round(image.width * scale));
+        const height = Math.max(1, Math.round(image.height * scale));
+
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+
+        const context = canvas.getContext("2d");
+
+        if (!context) {
+          throw new Error("Could not prepare image compression.");
+        }
+
+        context.drawImage(image, 0, 0, width, height);
+
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.75);
+
+        URL.revokeObjectURL(objectUrl);
+        resolve(dataUrl);
+      } catch (error) {
+        URL.revokeObjectURL(objectUrl);
+        reject(error);
+      }
+    };
+
+    image.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error("Failed to load image for compression."));
+    };
+
+    image.src = objectUrl;
+  });
+}
+
+function getFriendlyErrorMessage(error: unknown) {
+  if (!(error instanceof Error)) {
+    return "Embr hit an unexpected error. Try again.";
+  }
+
+  const message = error.message;
+  const lower = message.toLowerCase();
+
+  if (lower.includes("not logged in")) {
+    return "Your session expired. Please log back in.";
+  }
+
+  if (lower.includes("monthly") || message.includes("429")) {
+    return "You’ve reached your monthly usage limit. Check your plan or try again after reset.";
+  }
+
+  if (lower.includes("project not found")) {
+    return "That project could not be found. Reselect the project and try again.";
+  }
+
+  if (lower.includes("non-json")) {
+    return "Embr’s server returned an invalid response. Check the terminal logs.";
+  }
+
+  if (lower.includes("invalid json")) {
+    return "Embr’s server returned an invalid response. Check the terminal logs.";
+  }
+
+  if (lower.includes("image")) {
+    return "Embr had trouble reading that image. Try a smaller PNG, JPEG, or WebP.";
+  }
+
+  if (lower.includes("api error")) {
+    return "Embr’s API hit an error. Check the terminal logs and try again.";
+  }
+
+  return message || "Embr hit an error. Try again.";
+}
+
+export default function EmbrPage() {
+  const router = useRouter();
+  const chatScrollRef = useRef<HTMLDivElement | null>(null);
+
+  const [authLoading, setAuthLoading] = useState(true);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+
+  const [input, setInput] = useState("");
+  const [selectedImages, setSelectedImages] = useState<SelectedImage[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const [conversationId, setConversationId] = useState<string | null>(null);
+  const [projectType, setProjectType] = useState<ProjectType>("general");
+  const [aiMode, setAiMode] = useState<AIMode>("auto");
+
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  const [loadingProjects, setLoadingProjects] = useState(false);
+
+  const [newProjectName, setNewProjectName] = useState("");
+  const [newProjectType, setNewProjectType] = useState<ProjectType>("general");
+  const [creatingProject, setCreatingProject] = useState(false);
+  const [showProjectTools, setShowProjectTools] = useState(false);
+
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [loadingConversations, setLoadingConversations] = useState(false);
+  const [showRecentChats, setShowRecentChats] = useState(false);
+
+  const [usage, setUsage] = useState<UsageStatus | null>(null);
+  const [loadingUsage, setLoadingUsage] = useState(false);
+
+  const [showOperatorRead, setShowOperatorRead] = useState(false);
+  const [messages, setMessages] = useState<ChatMessage[]>([
+    {
+      role: "assistant",
+      content: "Embr is ready. Tell me what you need.",
+    },
+  ]);
+
+  const activeProject = useMemo(() => {
+    return projects.find((project) => project.id === selectedProjectId) || null;
+  }, [projects, selectedProjectId]);
+
+  const visibleConversations = useMemo(() => {
+    if (!selectedProjectId) return conversations;
+
+    return conversations.filter(
+      (conversation) => conversation.project_id === selectedProjectId
+    );
+  }, [conversations, selectedProjectId]);
+
+  useEffect(() => {
+    const savedDebugMode =
+      sessionStorage.getItem("embr_show_operator_read") === "true";
+
+    setShowOperatorRead(savedDebugMode);
+  }, []);
+
+  useEffect(() => {
+    sessionStorage.setItem(
+      "embr_show_operator_read",
+      showOperatorRead ? "true" : "false"
+    );
+  }, [showOperatorRead]);
+
+  useEffect(() => {
+    const chatElement = chatScrollRef.current;
+
+    if (!chatElement) return;
+
+    const timeout = window.setTimeout(() => {
+      chatElement.scrollTo({
+        top: chatElement.scrollHeight,
+        behavior: "smooth",
+      });
+    }, 50);
+
+    return () => window.clearTimeout(timeout);
+  }, [messages, loading]);
+
+  async function getAccessToken() {
+    const { data, error } = await supabaseBrowser.auth.getSession();
+
+    if (error || !data.session) {
+      router.replace("/login");
+      throw new Error("Not logged in.");
+    }
+
+    return data.session.access_token;
+  }
+
+  function clearSelectedImages(revoke = true) {
+    setSelectedImages((current) => {
+      if (revoke) {
+        current.forEach((image) => URL.revokeObjectURL(image.preview));
+      }
+
+      return [];
+    });
+  }
+
+  function resetChatForProject(project?: Project | null) {
+    setConversationId(null);
+    setInput("");
+    clearSelectedImages();
+
+    setMessages([
+      {
+        role: "assistant",
+        content: project
+          ? `New chat started for ${project.name}. What are we building?`
+          : "New chat started. Tell me what you need.",
+      },
+    ]);
+  }
+
+  function addSelectedImages(fileList: FileList | null) {
+    if (!fileList) return;
+
+    const maxImages = 4;
+    const maxBytesPerImage = 10 * 1024 * 1024;
+    const maxTotalBytes = 30 * 1024 * 1024;
+
+    const incomingFiles = Array.from(fileList);
+    const nextImages = [...selectedImages];
+    const rejected: string[] = [];
+
+    for (const file of incomingFiles) {
+      if (nextImages.length >= maxImages) {
+        rejected.push(`Only ${maxImages} images can be uploaded at once.`);
+        break;
+      }
+
+      if (!file.type.startsWith("image/")) {
+        rejected.push(`${file.name} is not an image.`);
+        continue;
+      }
+
+      if (file.size > maxBytesPerImage) {
+        rejected.push(`${file.name} is larger than 10MB.`);
+        continue;
+      }
+
+      const totalBytes =
+        nextImages.reduce((total, image) => total + image.file.size, 0) +
+        file.size;
+
+      if (totalBytes > maxTotalBytes) {
+        rejected.push("Total image upload size must stay under 30MB.");
+        continue;
+      }
+
+      nextImages.push({
+        id: `${file.name}-${file.size}-${Date.now()}-${Math.random()}`,
+        file,
+        preview: URL.createObjectURL(file),
+      });
+    }
+
+    if (rejected.length > 0) {
+      alert(Array.from(new Set(rejected)).join("\n"));
+    }
+
+    setSelectedImages(nextImages);
+  }
+
+  function removeSelectedImage(id: string) {
+    setSelectedImages((current) => {
+      const imageToRemove = current.find((image) => image.id === id);
+
+      if (imageToRemove) {
+        URL.revokeObjectURL(imageToRemove.preview);
+      }
+
+      return current.filter((image) => image.id !== id);
+    });
+  }
+
+  async function handleLogout() {
+    clearSelectedImages();
+    await supabaseBrowser.auth.signOut();
+    router.replace("/login");
+  }
+
+  async function loadUsage() {
+    setLoadingUsage(true);
+
+    try {
+      const token = await getAccessToken();
+
+      const res = await fetch("/api/usage", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await parseJsonResponse(res);
+
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to load usage.");
+      }
+
+      setUsage({
+        used: Number(data.used || 0),
+        limit: Number(data.limit || 0),
+        remaining: Number(data.remaining || 0),
+      });
+    } catch (error) {
+      console.error("LOAD USAGE ERROR:", error);
+    } finally {
+      setLoadingUsage(false);
+    }
+  }
+
+  async function loadProjects() {
+    setLoadingProjects(true);
+
+    try {
+      const token = await getAccessToken();
+
+      const res = await fetch("/api/projects", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await parseJsonResponse(res);
+
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to load projects.");
+      }
+
+      setProjects(data.projects || []);
+    } catch (error) {
+      console.error("LOAD PROJECTS ERROR:", error);
+    } finally {
+      setLoadingProjects(false);
+    }
+  }
+
+  async function createProject() {
+    if (!newProjectName.trim()) {
+      alert("Project name is required.");
+      return;
+    }
+
+    setCreatingProject(true);
+
+    try {
+      const token = await getAccessToken();
+
+      const res = await fetch("/api/projects", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          name: newProjectName.trim(),
+          type: newProjectType,
+          summary: "",
+          status: "active",
+        }),
+      });
+
+      const data = await parseJsonResponse(res);
+
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to create project.");
+      }
+
+      const createdProject = data.project as Project;
+
+      setNewProjectName("");
+      setNewProjectType("general");
+
+      await loadProjects();
+
+      setSelectedProjectId(createdProject.id);
+      setProjectType(createdProject.type || "general");
+      resetChatForProject(createdProject);
+      setShowProjectTools(false);
+    } catch (error) {
+      console.error("CREATE PROJECT ERROR:", error);
+      alert("Could not create project. Check terminal logs.");
+    } finally {
+      setCreatingProject(false);
+    }
+  }
+
+  async function loadConversations() {
+    setLoadingConversations(true);
+
+    try {
+      const token = await getAccessToken();
+
+      const res = await fetch("/api/conversations", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await parseJsonResponse(res);
+
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to load conversations.");
+      }
+
+      setConversations(data.conversations || []);
+    } catch (error) {
+      console.error("LOAD CONVERSATIONS ERROR:", error);
+    } finally {
+      setLoadingConversations(false);
+    }
+  }
+
+  async function loadConversation(id: string) {
+    setLoading(true);
+
+    try {
+      const token = await getAccessToken();
+
+      const res = await fetch(`/api/conversations?id=${id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await parseJsonResponse(res);
+
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to load conversation.");
+      }
+
+      const loadedMessages: ChatMessage[] = (data.messages || []).map(
+        (message: { role: "user" | "assistant"; content: string }) => ({
+          role: message.role,
+          content: message.content,
+        })
+      );
+
+      setConversationId(id);
+
+      if (isProjectType(data.conversation?.project_type)) {
+        setProjectType(data.conversation.project_type);
+      }
+
+      setSelectedProjectId(data.conversation?.project_id || null);
+
+      setMessages(
+        loadedMessages.length > 0
+          ? loadedMessages
+          : [
+              {
+                role: "assistant",
+                content: "This conversation has no messages yet.",
+              },
+            ]
+      );
+    } catch (error) {
+      console.error("LOAD CONVERSATION ERROR:", error);
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: "Embr could not load that conversation.",
+        },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function deleteConversation(id: string) {
+    const confirmed = window.confirm("Delete this conversation?");
+    if (!confirmed) return;
+
+    try {
+      const token = await getAccessToken();
+
+      const res = await fetch("/api/conversations", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ id }),
+      });
+
+      const data = await parseJsonResponse(res);
+
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to delete conversation.");
+      }
+
+      if (conversationId === id) {
+        resetChatForProject(activeProject);
+      }
+
+      await loadConversations();
+    } catch (error) {
+      console.error("DELETE CONVERSATION ERROR:", error);
+      alert("Could not delete conversation. Check terminal logs.");
+    }
+  }
+
+  function handleProjectChange(projectId: string) {
+    const nextProjectId = projectId || null;
+    const nextProject =
+      projects.find((project) => project.id === nextProjectId) || null;
+
+    setSelectedProjectId(nextProjectId);
+
+    if (nextProject && isProjectType(nextProject.type)) {
+      setProjectType(nextProject.type);
+    } else {
+      setProjectType("general");
+    }
+
+    resetChatForProject(nextProject);
+  }
+
+  async function sendMessage() {
+    if ((!input.trim() && selectedImages.length === 0) || loading) return;
+
+    const userMessage = input.trim();
+    const displayLife =
+      userMessage ||
+      (selectedImages.length === 1
+        ? "Image uploaded"
+        : `${selectedImages.length} images uploaded`);
+    const imagePreviewsForMessage = selectedImages.map((image) => image.preview);
+
+    const nextMessages: ChatMessage[] = [
+      ...messages,
+      {
+        role: "user",
+        content: displayLife,
+        imagePreviews: imagePreviewsForMessage,
+      },
+    ];
+
+    setMessages(nextMessages);
+    setInput("");
+    setLoading(true);
+
+    try {
+      const token = await getAccessToken();
+
+      const imageBase64List =
+        selectedImages.length > 0
+          ? await Promise.all(
+              selectedImages.map((image) => fileToDataUrl(image.file))
+            )
+          : [];
+
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          message: userMessage,
+          messages: nextMessages,
+          projectType,
+          aiMode,
+          projectId: selectedProjectId,
+          conversationId,
+          imageBase64List,
+        }),
+      });
+
+      const data = await parseJsonResponse(res);
+      const isDebugMode = process.env.NEXT_PUBLIC_EMBR_DEBUG === "true";
+      if (!res.ok) {
+        throw new Error(data.output || data.error || `API error: ${res.status}`);
+      }
+
+      if (data.conversationId) {
+        setConversationId(data.conversationId);
+      }
+
+setMessages((prev) => [
+  ...prev,
+  {
+    role: "assistant",
+    content:
+      data.response ||
+      data.content ||
+      data.text ||
+      data.output ||
+      "No response returned.",
+    engine: isDebugMode ? data.engine : undefined,
+    model: isDebugMode ? data.model : undefined,
+    embrRead: isDebugMode ? data.embrRead : undefined,
+    citations: Array.isArray(data.citations) ? data.citations : [],
+    searchResults: Array.isArray(data.search_results)
+      ? data.search_results
+      : Array.isArray(data.searchResults)
+        ? data.searchResults
+        : [],
+  },
+]);
+
+      clearSelectedImages(false);
+
+      await Promise.all([loadConversations(), loadUsage(), loadProjects()]);
+    } catch (error) {
+      console.error("SEND ERROR:", error);
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: getFriendlyErrorMessage(error),
+        },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const authFallbackTimer = window.setTimeout(() => {
+      if (!cancelled) {
+        console.warn("Auth loading timed out.");
+        setAuthLoading(false);
+      }
+    }, 8000);
+
+    async function initAuth() {
+      try {
+        const { data, error } = await supabaseBrowser.auth.getSession();
+
+        window.clearTimeout(authFallbackTimer);
+
+        if (error) {
+          console.error("Auth session error:", error);
+        }
+
+        if (!data.session) {
+          if (!cancelled) {
+            setAuthLoading(false);
+            router.replace("/login");
+          }
+          return;
+        }
+
+        if (cancelled) return;
+
+        setUserEmail(data.session.user.email || null);
+        setAuthLoading(false);
+
+        await Promise.allSettled([
+          loadConversations(),
+          loadUsage(),
+          loadProjects(),
+        ]);
+      } catch (error) {
+        window.clearTimeout(authFallbackTimer);
+
+        console.error("Auth init failed:", error);
+
+        if (!cancelled) {
+          setAuthLoading(false);
+          router.replace("/login");
+        }
+      }
+    }
+
+    initAuth();
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(authFallbackTimer);
+    };
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router]);
+
+  if (authLoading) {
+    return (
+      <main className="min-h-screen bg-slate-950 text-white p-6 flex items-center justify-center">
+        <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6 text-center">
+          <h1 className="text-3xl font-bold text-yellow-400 mb-2">Embr</h1>
+          <p className="text-slate-400">Loading your workspace... CLEAN TEST 123</p>
+        </div>
+      </main>
+    );
+  }
+
+  return (
+    <main className="min-h-screen bg-slate-950 text-white p-4 xl:p-6">
+      <div className="mx-auto grid max-w-[1600px] grid-cols-1 gap-4 xl:h-[88vh] xl:grid-cols-[260px_minmax(0,1fr)]">
+        <aside className="rounded-xl border border-slate-800 bg-slate-900 p-3 xl:h-full xl:overflow-y-auto">
+          <h1 className="text-2xl font-bold text-yellow-400">Embr</h1>
+
+          <div className="mt-1 truncate text-xs text-slate-500">
+            {userEmail}
+          </div>
+
+          <div className="mt-5 space-y-3">
+<div className="mt-5 space-y-3">
+  <button
+    type="button"
+    onClick={() => resetChatForProject(activeProject)}
+    className="w-full rounded-lg bg-yellow-500 px-3 py-3 text-sm font-bold text-black hover:bg-yellow-400"
+  >
+    + New Chat
+  </button>
+
+  <div>
+    <div className="mb-2 text-xs uppercase tracking-widest text-slate-500">
+      Active Workspace
+    </div>
+            <div>
+              <div className="mb-2 text-xs uppercase tracking-widest text-slate-500">
+                Active Workspace
+              </div>
+
+              <select
+                value={selectedProjectId || ""}
+                onChange={(e) => handleProjectChange(e.target.value)}
+                className="w-full rounded-lg border border-slate-700 bg-slate-800 p-3 text-sm outline-none"
+              >
+                <option value="">General Workspace</option>
+                {projects.map((project) => (
+                  <option key={project.id} value={project.id}>
+                    {project.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {activeProject && (
+              <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-3 text-sm">
+                <div className="font-semibold text-yellow-400">
+                  {activeProject.name}
+                </div>
+
+                <div className="mt-1 text-xs text-slate-400">
+                  {activeProject.type} · {activeProject.status}
+                </div>
+              </div>
+            )}
+
+            <div className="hidden">
+              <div className="mb-2 text-xs uppercase tracking-widest text-slate-500">
+                Mode
+              </div>
+            </div>
+            <div className="hidden">
+              <div className="mb-2 text-xs uppercase tracking-widest text-slate-500">
+                AI Power
+              </div>
+
+              <select
+                value={aiMode}
+                onChange={(e) => setAiMode(e.target.value as AIMode)}
+                className="w-full rounded-lg border border-slate-700 bg-slate-800 p-3 text-sm outline-none"
+              >
+                <option value="auto">Auto</option>
+                <option value="light">Light</option>
+                <option value="heavy">Heavy</option>
+              </select>
+
+              <div className="mt-1 text-xs text-slate-500">
+                Auto saves usage. Heavy thinks harder.
+              </div>
+            </div>
+          </div>
+
+            {showProjectTools && (
+              <div className="mt-3 space-y-2">
+                <input
+                  value={newProjectName}
+                  onChange={(e) => setNewProjectName(e.target.value)}
+                  className="w-full rounded-lg border border-slate-700 bg-slate-800 p-2 text-sm outline-none"
+                  placeholder="Project name"
+                />
+
+                <select
+                  value={newProjectType}
+                  onChange={(e) =>
+                    setNewProjectType(e.target.value as ProjectType)
+                  }
+                  className="w-full rounded-lg border border-slate-700 bg-slate-800 p-2 text-sm outline-none"
+                >
+                  <option value="general">General</option>
+                  <option value="business">Business</option>
+                  <option value="technical">Technical</option>
+                  <option value="research">Research</option>
+                  <option value="writing">Writing</option>
+                  <option value="life">Life</option>
+                </select>
+
+                <button
+                  type="button"
+                  onClick={createProject}
+                  disabled={creatingProject}
+                  className="w-full rounded-lg bg-yellow-500 px-3 py-2 text-sm font-bold text-black disabled:opacity-50"
+                >
+                  {creatingProject ? "Creating..." : "Create Project"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={loadProjects}
+                  className="w-full rounded-lg border border-slate-700 px-3 py-2 text-xs font-semibold text-slate-300 hover:bg-slate-800"
+                >
+                  Refresh Workspaces
+                </button>
+              </div>
+            )}
+
+          <section className="hidden">
+            <div className="mb-2 flex items-center justify-between">
+              <div className="text-sm font-semibold text-slate-200">
+                Monthly Usage
+              </div>
+
+              <button
+                type="button"
+                onClick={loadUsage}
+                className="text-xs text-yellow-400 hover:text-yellow-300"
+              >
+                Refresh
+              </button>
+            </div>
+
+            {loadingUsage && !usage ? (
+              <div className="text-sm text-slate-500">Loading usage...</div>
+            ) : usage ? (
+              <>
+                <div className="mb-2 text-xs text-slate-400">
+                  {formatTokens(usage.used)} used / {formatTokens(usage.limit)} limit
+                </div>
+
+                <div className="h-2 w-full overflow-hidden rounded-full bg-slate-800">
+                  <div
+                    className="h-full rounded-full bg-yellow-500"
+                    style={{
+                      width: `${Math.min(
+                        100,
+                        usage.limit > 0 ? (usage.used / usage.limit) * 100 : 0
+                      )}%`,
+                    }}
+                  />
+                </div>
+
+                <div className="mt-2 text-xs text-slate-500">
+                  {formatTokens(usage.remaining)} remaining this month
+                </div>
+              </>
+            ) : (
+              <div className="text-sm text-slate-500">No usage data yet.</div>
+            )}
+          </section>
+
+          <section className="mt-4 border-t border-slate-800 pt-4">
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <button
+                type="button"
+                onClick={() => setShowRecentChats((value) => !value)}
+                className="flex min-w-0 items-center gap-2 text-sm font-semibold text-slate-300 hover:text-yellow-300"
+              >
+                <span className="text-slate-500">
+                  {showRecentChats ? "▾" : "▸"}
+                </span>
+                <span>Recent Chats</span>
+                <span className="rounded-full bg-slate-800 px-2 py-0.5 text-xs font-normal text-slate-400">
+                  {visibleConversations.length}
+                </span>
+              </button>
+
+              {showRecentChats && (
+                <button
+                  type="button"
+                  onClick={loadConversations}
+                  className="text-xs text-yellow-400 hover:text-yellow-300"
+                >
+                  Refresh
+                </button>
+              )}
+            </div>
+
+            <div
+              className={
+                showRecentChats
+                  ? "max-h-[360px] space-y-2 overflow-y-auto pr-1"
+                  : "hidden"
+              }
+            >
+              {loadingConversations && (
+                <div className="rounded-lg bg-slate-800 p-3 text-sm text-slate-400">
+                  Loading conversations...
+                </div>
+              )}
+
+              {!loadingConversations && visibleConversations.length === 0 && (
+                <div className="rounded-lg bg-slate-800 p-3 text-sm text-slate-400">
+                  No conversations yet.
+                </div>
+              )}
+
+              {visibleConversations.map((conversation) => {
+                const active = conversation.id === conversationId;
+
+                return (
+                  <div
+                    key={conversation.id}
+                    className={
+                      active
+                        ? "group rounded-lg border border-yellow-500 bg-yellow-500/10 p-3"
+                        : "group rounded-lg border border-slate-800 bg-slate-800 p-3 hover:bg-slate-700"
+                    }
+                  >
+                    <button
+                      type="button"
+                      onClick={() => loadConversation(conversation.id)}
+                      className="w-full text-left"
+                    >
+                      <div className="break-words text-sm font-semibold text-slate-100">
+                        {conversation.title}
+                      </div>
+
+                      <div className="mt-1 text-xs text-slate-500">
+                        {formatDate(conversation.updated_at)}
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => deleteConversation(conversation.id)}
+                      className="mt-2 hidden text-xs text-red-300 hover:text-red-200 group-hover:inline-block group-focus-within:inline-block"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+
+          <div className="mt-6 border-t border-slate-800 pt-4">
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="w-full rounded-lg border border-red-900 bg-red-950/40 px-3 py-2 text-sm font-semibold text-red-300 hover:bg-red-950"
+            >
+              Log Out
+            </button>
+          </div>
+        </aside>
+
+        <section className="flex min-h-[70vh] flex-col rounded-xl border border-slate-800 bg-slate-900 p-4 xl:h-full">
+          <div className="mb-4 flex items-center justify-between gap-4">
+            <div>
+              <div className="text-lg font-semibold">Embr </div>
+
+              <div className="text-xs text-slate-500">
+                {activeProject
+                  ? `Project: ${activeProject.name}`
+                  : conversationId
+                    ? "Saved conversation active"
+                    : "New conversation"}
+              </div>
+            </div>
+          </div>
+          <div
+            ref={chatScrollRef}
+            className="mb-4 flex-1 space-y-4 overflow-y-auto pr-1"
+          >
+            {messages.map((message, index) => (
+              <div
+                key={index}
+                className={
+                  message.role === "user"
+                    ? "ml-auto max-w-[85%] rounded-2xl bg-blue-600 px-4 py-3 text-white"
+                    : "mr-auto max-w-[85%] rounded-2xl border border-yellow-500 bg-slate-800 px-4 py-3 text-slate-100"
+                }
+              >
+                <div className="mb-1 text-xs uppercase tracking-wide opacity-70">
+                  {message.role}
+                </div>
+
+                {message.imagePreviews && message.imagePreviews.length > 0 && (
+                  <div className="mb-3 grid grid-cols-2 gap-2">
+                    {message.imagePreviews.map((preview, imageIndex) => (
+                      <img
+                        key={imageIndex}
+                        src={preview}
+                        alt="Uploaded image"
+                        className="max-h-64 rounded-lg border border-slate-700 object-contain"
+                      />
+                    ))}
+                  </div>
+                )}
+
+                <div className="whitespace-pre-wrap text-sm leading-6">
+                  {message.content}
+                </div>
+
+                {message.role === "assistant" &&
+                  getDisplaySources(message).length > 0 && (
+                    <div className="mt-2 flex items-center gap-1 text-[10px] leading-4 text-slate-500">
+                      <span className="mr-1 inline-flex items-center gap-1 text-slate-600">
+                        <span aria-hidden="true">↗</span>
+                        <span>Sources</span>
+                      </span>
+
+                      {getDisplaySources(message)
+                        .slice(0, 3)
+                        .map((source, sourceIndex) => {
+                          const title = getSourceTitle(source, sourceIndex);
+                          const url = getSourceUrl(source);
+
+                          return url ? (
+                            <a
+                              key={`${url}-${sourceIndex}`}
+                              href={url}
+                              target="_blank"
+                              rel="noreferrer"
+                              title={title}
+                              aria-label={`Source ${sourceIndex + 1}: ${title}`}
+                              className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-slate-800 bg-slate-950/60 text-[10px] text-slate-500 hover:border-emerald-500/60 hover:text-emerald-300"
+                            >
+                              {sourceIndex + 1}
+                            </a>
+                          ) : (
+                            <span
+                              key={`${title}-${sourceIndex}`}
+                              title={title}
+                              className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-slate-800 bg-slate-950/60 text-[10px] text-slate-500"
+                            >
+                              {sourceIndex + 1}
+                            </span>
+                          );
+                        })}
+                    </div>
+                  )}
+
+              </div>
+            ))}
+
+            {loading && (
+              <div className="mr-auto max-w-[85%] rounded-2xl border border-yellow-500 bg-slate-800 px-4 py-3 text-slate-100">
+                Embr is thinking...
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-3">
+            {selectedImages.length > 0 && (
+              <div className="rounded-xl border border-slate-700 bg-slate-800 p-3">
+                <div className="mb-2 flex items-center justify-between gap-3">
+                  <div className="text-xs uppercase tracking-wide text-slate-400">
+                    Image Preview · {selectedImages.length}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => clearSelectedImages()}
+                    className="text-xs text-red-400 hover:text-red-300"
+                  >
+                    Remove all
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+                  {selectedImages.map((image) => (
+                    <div key={image.id} className="relative">
+                      <img
+                        src={image.preview}
+                        alt={image.file.name}
+                        className="h-28 w-full rounded-lg border border-slate-700 object-cover"
+                      />
+
+                      <button
+                        type="button"
+                        onClick={() => removeSelectedImage(image.id)}
+                        className="absolute right-1 top-1 rounded bg-red-950 px-2 py-1 text-xs text-red-200"
+                      >
+                        ✕
+                      </button>
+
+                      <div className="mt-1 truncate text-xs text-slate-500">
+                        {(image.file.size / (1024 * 1024)).toFixed(1)}MB
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="flex flex-col gap-3 md:flex-row">
+              <label className="cursor-pointer rounded-lg border border-slate-700 bg-slate-800 px-4 py-3 text-center text-sm font-semibold text-slate-200 hover:bg-slate-700">
+                Upload Photos
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => {
+                    addSelectedImages(e.target.files);
+                    e.currentTarget.value = "";
+                  }}
+                />
+              </label>
+
+              <input
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") sendMessage();
+                }}
+                className="flex-1 rounded-lg border border-slate-700 bg-slate-800 p-3 outline-none"
+                placeholder={
+                  activeProject
+                    ? `Ask Embr about ${activeProject.name} or upload photos...`
+                    : "Type a message or upload photos — Embr will infer the next step..."
+                }
+              />
+
+              <button
+                type="button"
+                onClick={sendMessage}
+                disabled={loading}
+                className="rounded-lg bg-yellow-500 px-4 py-3 font-semibold text-black disabled:opacity-50"
+              >
+                Send
+              </button>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+  );
+}

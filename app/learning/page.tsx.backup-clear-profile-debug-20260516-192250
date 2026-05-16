@@ -285,9 +285,7 @@ export default function LearningPage() {
 
       const data = await res.json();
 
-      console.log("Clear profile response:", data);
-
-      if (!res.ok || data.ok === false) {
+      if (!res.ok) {
         throw new Error(data.error || "Could not clear profile memory.");
       }
 
