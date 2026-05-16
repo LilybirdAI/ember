@@ -86,8 +86,6 @@ export function thinkAsEmbr(message: string): EmbrDecision {
     feeling,
     voice,
     finalMode,
-    summary: recognizedMemory.recognized
-      ? `Embr recognized ${recognizedMemory.primaryMemory}; priority is ${priority.primaryPriority}; feeling is ${feeling.primaryFeeling}; voice is ${voice.voiceName}; instinct says ${instinct.instinctiveMove}; routed through ${route.route}.`
-      : `Embr priority is ${priority.primaryPriority}; feeling is ${feeling.primaryFeeling}; voice is ${voice.voiceName}; instinct says ${instinct.instinctiveMove}; detected ${signal.taskType} with ${signal.emotionalState}; routed through ${route.route}.`
+    summary: ""
   };
 }

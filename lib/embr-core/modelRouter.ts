@@ -11,7 +11,14 @@ export type EmbrModelRoute =
   | "human_needed";
 
 export type EmbrEngineStep = {
-  engine: "embr_core" | "openai" | "claude" | "perplexity" | "tool" | "human";
+  engine:
+    | "embr_core"
+    | "openai"
+    | "claude"
+    | "perplexity"
+    | "grok"
+    | "tool"
+    | "human";
   role: string;
 };
 
@@ -22,7 +29,15 @@ export type EmbrRoutingDecision = {
   shouldUseOutsideModel: boolean;
   requiresHumanApproval: boolean;
 };
-
+function shouldEscalateToReview(signal: EmbrSignal): boolean {
+  return (
+    signal.urgency === "high" ||
+    signal.taskType === "coding" ||
+    signal.taskType === "business" ||
+    signal.emotionalState === "stressed" ||
+    signal.emotionalState === "overwhelmed"
+  );
+}
 export function chooseModelRoute(
   signal: EmbrSignal,
   direction: EmbrResponseDirection
@@ -88,32 +103,47 @@ export function chooseModelRoute(
   }
 
   // Business planning: OpenAI reasons, Claude critiques, Embr decides.
-  if (direction.mode === "business_plan") {
-    return {
-      route: "multi_model",
-      reason: "Business decisions need reasoning, critique, and final operator judgment.",
-      enginePlan: [
-        {
-          engine: "embr_core",
-          role: "Protect scope, pricing, reputation, user stability, and business goal."
-        },
-        {
-          engine: "openai",
-          role: "Generate strategic options, pricing logic, or next-step plan."
-        },
-        {
-          engine: "claude",
-          role: "Critique for overpromising, weak positioning, scope risk, or bad incentives."
-        },
-        {
-          engine: "embr_core",
-          role: "Choose the best grounded answer and respond as Embr."
-        }
-      ],
-      shouldUseOutsideModel: true,
-      requiresHumanApproval: false
-    };
+ if (direction.mode === "business_plan") {
+  const enginePlan: EmbrEngineStep[] = [
+    {
+      engine: "embr_core",
+      role: "Protect scope, pricing, reputation, user stability, and business goal."
+    },
+    {
+      engine: "openai",
+      role: "Generate strategic options, pricing logic, or next-step plan."
+    }
+  ];
+
+  if (shouldEscalateToReview(signal)) {
+    enginePlan.push({
+      engine: "claude",
+      role: "Critique for overpromising, weak positioning, scope risk, or bad incentives."
+    });
   }
+
+  if (signal.urgency === "high") {
+    enginePlan.push({
+      engine: "grok",
+      role: "Challenge the plan with a blunt alternate take and identify what may be missing."
+    });
+  }
+
+  enginePlan.push({
+    engine: "embr_core",
+    role: "Choose the best grounded answer and respond as Embr."
+  });
+
+  return {
+    route: shouldEscalateToReview(signal) ? "multi_model" : "openai_reasoning",
+    reason: shouldEscalateToReview(signal)
+      ? "Business decision has enough risk to benefit from review."
+      : "Business request can be handled with reasoning and Embr final voice.",
+    enginePlan,
+    shouldUseOutsideModel: true,
+    requiresHumanApproval: false
+  };
+}
 
   // Teaching: OpenAI explains, Claude can simplify/review if needed.
   if (direction.mode === "teaching") {
