@@ -311,6 +311,46 @@ export default function LearningPage() {
     }
   }
 
+  async function reportWrongRoute(event: any) {
+    const expectedDomain = window.prompt(
+      "Expected domain? Examples: general, weather, profile_memory, technical, culture, news, knowledge, business",
+      event?.domain || ""
+    );
+
+    if (!expectedDomain?.trim()) return;
+
+    setWorking(true);
+    setError("");
+
+    try {
+      const res = await fetch("/api/learning/correct", {
+        method: "POST",
+        headers: learningHeaders(),
+        body: JSON.stringify({
+          type: "wrong_route",
+          message: event?.message || "",
+          time: event?.time || "",
+          actualDomain: event?.domain || "unknown",
+          actualEngine: event?.engine || "unknown",
+          expectedDomain: expectedDomain.trim(),
+          event,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || data.ok === false) {
+        throw new Error(data.error || "Could not create wrong-route correction.");
+      }
+
+      await loadLearning();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not create wrong-route correction.");
+    } finally {
+      setWorking(false);
+    }
+  }
+
   async function applyLowRiskCorrections() {
     setWorking(true);
     setError("");
@@ -831,6 +871,15 @@ export default function LearningPage() {
                         {event.error}
                       </div>
                     )}
+
+                    <button
+                      type="button"
+                      onClick={() => reportWrongRoute(event)}
+                      disabled={working}
+                      className="mt-3 rounded-lg border border-yellow-500/50 px-3 py-1.5 text-xs font-semibold text-yellow-300 hover:bg-yellow-500/10 disabled:opacity-50"
+                    >
+                      Wrong Route
+                    </button>
                   </div>
                 ))}
               </div>
