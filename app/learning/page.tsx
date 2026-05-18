@@ -351,6 +351,51 @@ export default function LearningPage() {
     }
   }
 
+  async function promoteCorrectionToSmokeTest(correction: any) {
+    const expectedDomain = correction?.expected?.domain;
+    const message = correction?.target?.message;
+
+    if (!expectedDomain || !message) {
+      setError("This correction is missing a message or expected domain.");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Promote this correction to a router smoke test?\n\n"${message}" → ${expectedDomain}`
+    );
+
+    if (!confirmed) return;
+
+    setWorking(true);
+    setError("");
+
+    try {
+      const res = await fetch("/api/learning/promote-smoke-test", {
+        method: "POST",
+        headers: learningHeaders(),
+        body: JSON.stringify({
+          correction,
+          message,
+          actualDomain: correction?.target?.domain || "unknown",
+          actualEngine: correction?.target?.engine || "unknown",
+          expectedDomain,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || data.ok === false) {
+        throw new Error(data.error || "Could not promote correction to smoke test.");
+      }
+
+      await loadLearning();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not promote correction to smoke test.");
+    } finally {
+      setWorking(false);
+    }
+  }
+
   async function applyLowRiskCorrections() {
     setWorking(true);
     setError("");
@@ -831,6 +876,19 @@ export default function LearningPage() {
                           Feedback: “{correction.feedbackMessage}”
                         </div>
                       )}
+
+                      {(correction as any).correctionType === "wrong_route" &&
+                        (correction as any).expected?.domain &&
+                        correction.target?.message && (
+                          <button
+                            type="button"
+                            onClick={() => promoteCorrectionToSmokeTest(correction)}
+                            disabled={working}
+                            className="mt-3 rounded-lg border border-emerald-500/50 px-3 py-1.5 text-xs font-semibold text-emerald-300 hover:bg-emerald-500/10 disabled:opacity-50"
+                          >
+                            Promote to Smoke Test
+                          </button>
+                        )}
                     </div>
                   ))}
                 </div>
