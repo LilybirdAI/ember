@@ -267,9 +267,18 @@ export default function LearningPage() {
     }
   }
 
-  async function clearProfileMemory() {
+  async function clearProfileMemory(
+    clearTarget: "location" | "name" | "preferences" | "all" = "all"
+  ) {
+    const labels = {
+      location: "saved location",
+      name: "saved name",
+      preferences: "saved preferences",
+      all: "all profile memory",
+    };
+
     const confirmed = window.confirm(
-      "Clear Embr profile memory? This removes saved name/location from the DigitalOcean memory file."
+      `Clear Embr ${labels[clearTarget]}?`
     );
 
     if (!confirmed) return;
@@ -278,10 +287,13 @@ export default function LearningPage() {
     setError("");
 
     try {
-      const res = await fetch("/api/learning/profile", {
-        method: "DELETE",
-        headers: await learningHeadersWithAuth(),
-      });
+      const res = await fetch(
+        `/api/learning/profile?clear=${encodeURIComponent(clearTarget)}`,
+        {
+          method: "DELETE",
+          headers: await learningHeadersWithAuth(),
+        }
+      );
 
       const data = await res.json();
 
@@ -603,13 +615,39 @@ export default function LearningPage() {
                     )}
                   </div>
 
-                  <button
-                    onClick={clearProfileMemory}
-                    disabled={working}
-                    className="rounded-xl border border-red-500/60 px-4 py-2 text-sm font-semibold text-red-300 hover:bg-red-500/10 disabled:opacity-50"
-                  >
-                    Clear Profile Memory
-                  </button>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <button
+                      onClick={() => clearProfileMemory("location")}
+                      disabled={working}
+                      className="rounded-xl border border-yellow-500/60 px-4 py-2 text-sm font-semibold text-yellow-300 hover:bg-yellow-500/10 disabled:opacity-50"
+                    >
+                      Clear Location
+                    </button>
+
+                    <button
+                      onClick={() => clearProfileMemory("name")}
+                      disabled={working}
+                      className="rounded-xl border border-yellow-500/60 px-4 py-2 text-sm font-semibold text-yellow-300 hover:bg-yellow-500/10 disabled:opacity-50"
+                    >
+                      Clear Name
+                    </button>
+
+                    <button
+                      onClick={() => clearProfileMemory("preferences")}
+                      disabled={working}
+                      className="rounded-xl border border-yellow-500/60 px-4 py-2 text-sm font-semibold text-yellow-300 hover:bg-yellow-500/10 disabled:opacity-50"
+                    >
+                      Clear Preferences
+                    </button>
+
+                    <button
+                      onClick={() => clearProfileMemory("all")}
+                      disabled={working}
+                      className="rounded-xl border border-red-500/60 px-4 py-2 text-sm font-semibold text-red-300 hover:bg-red-500/10 disabled:opacity-50"
+                    >
+                      Clear All
+                    </button>
+                  </div>
                 </div>
               </Panel>
               <Panel title="Domains">

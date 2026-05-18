@@ -49,8 +49,11 @@ export async function DELETE(req: Request) {
     return signInRequired();
   }
 
+  const { searchParams } = new URL(req.url);
+  const clear = searchParams.get("clear")?.trim() || "all";
+
   return fetchEmbrLearning(
-    `/learn/profile?userId=${encodeURIComponent(userId)}`,
+    `/learn/profile?userId=${encodeURIComponent(userId)}&clear=${encodeURIComponent(clear)}`,
     {
       method: "DELETE",
     },
