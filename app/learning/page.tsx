@@ -126,6 +126,7 @@ export default function LearningPage() {
   const [rules, setRules] = useState("");
   const [corrections, setCorrections] = useState<Correction[]>([]);
   const [appliedCorrections, setAppliedCorrections] = useState<AppliedCorrection[]>([]);
+  const [promotedSmokeTests, setPromotedSmokeTests] = useState<any[]>([]);
   const [profile, setProfile] = useState<ProfileResponse["profile"] | null>(null);
   const [profileError, setProfileError] = useState("");
   const [newRule, setNewRule] = useState("");
@@ -389,10 +390,35 @@ export default function LearningPage() {
       }
 
       await loadLearning();
+      await loadPromotedSmokeTests();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not promote correction to smoke test.");
     } finally {
       setWorking(false);
+    }
+  }
+
+  useEffect(() => {
+    loadPromotedSmokeTests();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function loadPromotedSmokeTests() {
+    try {
+      const res = await fetch("/api/learning/promoted-smoke-tests", {
+        cache: "no-store",
+        headers: learningHeaders(),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || data.ok === false) {
+        throw new Error(data.error || "Could not load promoted smoke tests.");
+      }
+
+      setPromotedSmokeTests(Array.isArray(data.tests) ? data.tests : []);
+    } catch (err) {
+      console.error("LOAD PROMOTED SMOKE TESTS ERROR:", err);
     }
   }
 
@@ -889,6 +915,40 @@ export default function LearningPage() {
                             Promote to Smoke Test
                           </button>
                         )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Panel>
+
+            <Panel title="Promoted Smoke Tests">
+              {promotedSmokeTests.length === 0 ? (
+                <p className="text-sm text-slate-400">
+                  No promoted smoke tests yet.
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {promotedSmokeTests.slice(-20).reverse().map((test, index) => (
+                    <div
+                      key={`${test.time || "unknown"}-${index}`}
+                      className="rounded-xl border border-slate-800 bg-slate-950 p-3"
+                    >
+                      <div className="flex flex-wrap items-center gap-2 text-xs uppercase tracking-wide text-emerald-400">
+                        <span>{test.type || "router_smoke_test"}</span>
+                        {test.source && <span>· {test.source}</span>}
+                      </div>
+
+                      <div className="mt-2 text-sm text-slate-200">
+                        {test.message || "No message"}
+                      </div>
+
+                      <div className="mt-2 text-xs leading-5 text-slate-400">
+                        Expected: {test.expectedDomain || "unknown"}
+                        <br />
+                        Previous: {test.actualDomain || "unknown"} / {test.actualEngine || "unknown"}
+                        <br />
+                        Time: {test.time || "unknown"}
+                      </div>
                     </div>
                   ))}
                 </div>
