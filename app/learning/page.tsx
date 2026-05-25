@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import SystemStatusPanel from "./SystemStatusPanel";
 import RouteSimulatorPanel from "./RouteSimulatorPanel";
-import AppIntelligenceConsole from "./AppIntelligenceConsole";
 
 type LearningEvent = {
   time?: string;
@@ -558,7 +557,6 @@ export default function LearningPage() {
     return (
       <main className="min-h-screen bg-slate-950 px-4 py-8 text-slate-100">
       <SystemStatusPanel />
-      <AppIntelligenceConsole />
       <RouteSimulatorPanel />
         <div className="mx-auto max-w-xl rounded-2xl border border-slate-800 bg-slate-900 p-6">
           <div className="text-xs uppercase tracking-[0.3em] text-yellow-400">
