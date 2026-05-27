@@ -90,6 +90,36 @@ export default function AppIntelligenceConsolePage() {
     loadUsageSummary();
   }, []);
 
+
+  async function loadMetrics() {
+    try {
+      setMetricsLoading(true);
+
+      const [usageRes, qualityRes] = await Promise.all([
+        fetch("/api/app-intelligence/usage/summary", { cache: "no-store" }),
+        fetch("/api/app-intelligence/quality/summary", { cache: "no-store" }),
+      ]);
+
+      const usage = (await usageRes.json()) as UsageSummary;
+      const quality = (await qualityRes.json()) as QualitySummary;
+
+      setUsageSummary(usage);
+      setQualitySummary(quality);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Unknown metrics loading error";
+
+      setUsageSummary({ ok: false, error: message });
+      setQualitySummary({ ok: false, error: message });
+    } finally {
+      setMetricsLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadMetrics();
+  }, []);
+
   async function runTest() {
     let parsedContext: unknown = {};
 
@@ -274,6 +304,133 @@ export default function AppIntelligenceConsolePage() {
                       </td>
                     </tr>
                   ))}
+                </tbody>
+              </table>
+            </div>
+          ) : null}
+        </section>
+
+
+        <section className="mt-6 rounded-2xl border border-slate-800 bg-slate-900/70 p-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-xs uppercase tracking-[0.35em] text-yellow-400">
+                Platform Metrics
+              </p>
+              <h2 className="mt-2 text-xl font-semibold">
+                Usage + Quality
+              </h2>
+              <p className="mt-1 text-sm text-slate-400">
+                Live server-side metrics for Embr App Intelligence.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={loadMetrics}
+              disabled={metricsLoading}
+              className="rounded-xl border border-slate-700 px-4 py-3 text-sm font-semibold text-slate-100 hover:bg-slate-800 disabled:opacity-60"
+            >
+              {metricsLoading ? "Refreshing..." : "Refresh Metrics"}
+            </button>
+          </div>
+
+          {usageSummary?.error || qualitySummary?.error ? (
+            <div className="mt-4 rounded-xl border border-red-500/50 bg-red-500/10 p-4 text-sm text-red-200">
+              {usageSummary?.error || qualitySummary?.error}
+            </div>
+          ) : null}
+
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+            <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
+              <p className="text-xs uppercase tracking-wide text-slate-500">
+                Requests
+              </p>
+              <p className="text-2xl font-semibold">
+                {usageSummary?.totalRequests ?? 0}
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
+              <p className="text-xs uppercase tracking-wide text-slate-500">
+                Apps
+              </p>
+              <p className="text-2xl font-semibold">
+                {usageSummary?.appCount ?? qualitySummary?.appCount ?? 0}
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
+              <p className="text-xs uppercase tracking-wide text-slate-500">
+                Tokens
+              </p>
+              <p className="text-2xl font-semibold">
+                {usageSummary?.totalTokens ?? 0}
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
+              <p className="text-xs uppercase tracking-wide text-slate-500">
+                Avg Quality
+              </p>
+              <p className="text-2xl font-semibold">
+                {qualitySummary?.averageQualityScore ?? 0}
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
+              <p className="text-xs uppercase tracking-wide text-slate-500">
+                Risk Flags
+              </p>
+              <p className="text-2xl font-semibold">
+                {(qualitySummary?.boundaryRiskCount ?? 0) +
+                  (qualitySummary?.inventedDataRiskCount ?? 0) +
+                  (qualitySummary?.placeholderRiskCount ?? 0)}
+              </p>
+            </div>
+          </div>
+
+          {usageSummary?.apps?.length || qualitySummary?.apps?.length ? (
+            <div className="mt-4 overflow-hidden rounded-xl border border-slate-800">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-slate-950 text-xs uppercase tracking-wide text-slate-500">
+                  <tr>
+                    <th className="px-4 py-3">App</th>
+                    <th className="px-4 py-3">Requests</th>
+                    <th className="px-4 py-3">Avg Quality</th>
+                    <th className="px-4 py-3">Tokens</th>
+                    <th className="px-4 py-3">Last Used</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800 bg-slate-900/50">
+                  {(usageSummary?.apps || []).slice(0, 8).map((app) => {
+                    const qualityApp = qualitySummary?.apps?.find(
+                      (item) => item.appId === app.appId
+                    );
+
+                    return (
+                      <tr key={app.appId}>
+                        <td className="px-4 py-3">
+                          <div className="font-medium text-slate-100">
+                            {app.appName}
+                          </div>
+                          <div className="text-xs text-slate-500">
+                            {app.appId}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">{app.requests}</td>
+                        <td className="px-4 py-3">
+                          {qualityApp?.averageQualityScore ?? "—"}
+                        </td>
+                        <td className="px-4 py-3">{app.totalTokens}</td>
+                        <td className="px-4 py-3 text-slate-400">
+                          {app.lastUsedAt
+                            ? new Date(app.lastUsedAt).toLocaleString()
+                            : "Unknown"}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
