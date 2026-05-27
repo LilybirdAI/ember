@@ -3,6 +3,28 @@
 import { useEffect, useState } from "react";
 
 
+
+type QualitySummary = {
+  ok?: boolean;
+  totalResponses?: number;
+  averageQualityScore?: number;
+  placeholderRiskCount?: number;
+  boundaryRiskCount?: number;
+  inventedDataRiskCount?: number;
+  appCount?: number;
+  apps?: Array<{
+    appId: string;
+    appName: string;
+    responses: number;
+    averageQualityScore: number;
+    placeholderRiskCount: number;
+    boundaryRiskCount: number;
+    inventedDataRiskCount: number;
+    lastEvaluatedAt: string | null;
+  }>;
+  error?: string;
+};
+
 type UsageSummary = {
   ok?: boolean;
   totalRequests?: number;
@@ -65,7 +87,8 @@ export default function AppIntelligenceConsolePage() {
   const [raw, setRaw] = useState("");
   const [loading, setLoading] = useState(false);
   const [usageSummary, setUsageSummary] = useState<UsageSummary | null>(null);
-  const [usageLoading, setUsageLoading] = useState(false);
+  const [qualitySummary, setQualitySummary] = useState<QualitySummary | null>(null);
+  const [metricsLoading, setMetricsLoading] = useState(false);
 
 
   async function loadUsageSummary() {
