@@ -87,6 +87,7 @@ export default function AppIntelligenceConsolePage() {
   const [userId, setUserId] = useState("test-user-1");
   const [mode, setMode] = useState("");
   const [memoryScope, setMemoryScope] = useState("app_user");
+  const [environment, setEnvironment] = useState("test");
   const [message, setMessage] = useState("What should I focus on after this round?");
   const [appContext, setAppContext] = useState(DEFAULT_CONTEXT);
   const [result, setResult] = useState<AppIntelResponse | null>(null);
@@ -458,7 +459,7 @@ export default function AppIntelligenceConsolePage() {
         </section>
 
         <section className="mt-6 rounded-2xl border border-slate-800 bg-slate-900/70 p-6">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
             <label className="text-sm">
               <span className="mb-1 block text-xs uppercase tracking-wide text-slate-500">
                 App ID
@@ -503,6 +504,22 @@ export default function AppIntelligenceConsolePage() {
                 className="w-full rounded-xl border border-slate-700 bg-slate-950 p-3 outline-none focus:border-yellow-500"
               />
             </label>
+
+            <label className="text-sm">
+              <span className="mb-1 block text-xs uppercase tracking-wide text-slate-500">
+                Environment
+              </span>
+              <select
+                value={environment}
+                onChange={(event) => setEnvironment(event.target.value)}
+                className="w-full rounded-xl border border-slate-700 bg-slate-950 p-3 outline-none focus:border-yellow-500"
+              >
+                <option value="test">test</option>
+                <option value="staging">staging</option>
+                <option value="production">production</option>
+              </select>
+            </label>
+
           </div>
 
           <div className="mt-4 grid gap-4 lg:grid-cols-2">
