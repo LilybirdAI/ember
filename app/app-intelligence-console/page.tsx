@@ -28,6 +28,9 @@ type QualitySummary = {
 type UsageSummary = {
   ok?: boolean;
   totalRequests?: number;
+  productionRequests?: number;
+  stagingRequests?: number;
+  testRequests?: number;
   totalTokens?: number;
   placeholderGuardrailCount?: number;
   appCount?: number;
@@ -35,6 +38,9 @@ type UsageSummary = {
     appId: string;
     appName: string;
     requests: number;
+    productionRequests?: number;
+    stagingRequests?: number;
+    testRequests?: number;
     totalTokens: number;
     placeholderGuardrailCount: number;
     lastUsedAt: string | null;
@@ -91,26 +97,9 @@ export default function AppIntelligenceConsolePage() {
   const [metricsLoading, setMetricsLoading] = useState(false);
 
 
-  async function loadUsageSummary() {
-    try {
-      setUsageLoading(true);
-      const res = await fetch("/api/app-intelligence/usage/summary", {
-        cache: "no-store",
-      });
-      const data = (await res.json()) as UsageSummary;
-      setUsageSummary(data);
-    } catch (error) {
-      setUsageSummary({
-        ok: false,
-        error: error instanceof Error ? error.message : "Unknown usage summary error",
-      });
-    } finally {
-      setUsageLoading(false);
-    }
-  }
 
   useEffect(() => {
-    loadUsageSummary();
+    loadMetrics();
   }, []);
 
 
@@ -185,7 +174,7 @@ export default function AppIntelligenceConsolePage() {
 
       try {
         setResult(JSON.parse(text) as AppIntelResponse);
-        await loadUsageSummary();
+        await loadMetrics();
       } catch {
         setResult({
           ok: false,
@@ -244,11 +233,11 @@ export default function AppIntelligenceConsolePage() {
 
             <button
               type="button"
-              onClick={loadUsageSummary}
-              disabled={usageLoading}
+              onClick={loadMetrics}
+              disabled={metricsLoading}
               className="rounded-xl border border-slate-700 px-4 py-3 text-sm font-semibold text-slate-100 hover:bg-slate-800 disabled:opacity-60"
             >
-              {usageLoading ? "Refreshing..." : "Refresh Usage"}
+              {metricsLoading ? "Refreshing..." : "Refresh Usage"}
             </button>
           </div>
 
@@ -367,28 +356,28 @@ export default function AppIntelligenceConsolePage() {
           <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
             <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
               <p className="text-xs uppercase tracking-wide text-slate-500">
-                Requests
+                Total Requests
               </p>
               <p className="text-2xl font-semibold">
                 {usageSummary?.totalRequests ?? 0}
               </p>
             </div>
 
-            <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
-              <p className="text-xs uppercase tracking-wide text-slate-500">
-                Apps
+            <div className="rounded-xl border border-green-500/30 bg-green-500/10 p-4">
+              <p className="text-xs uppercase tracking-wide text-green-300">
+                Production
               </p>
-              <p className="text-2xl font-semibold">
-                {usageSummary?.appCount ?? qualitySummary?.appCount ?? 0}
+              <p className="text-2xl font-semibold text-green-200">
+                {usageSummary?.productionRequests ?? 0}
               </p>
             </div>
 
-            <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
-              <p className="text-xs uppercase tracking-wide text-slate-500">
-                Tokens
+            <div className="rounded-xl border border-blue-500/30 bg-blue-500/10 p-4">
+              <p className="text-xs uppercase tracking-wide text-blue-300">
+                Test / Demo
               </p>
-              <p className="text-2xl font-semibold">
-                {usageSummary?.totalTokens ?? 0}
+              <p className="text-2xl font-semibold text-blue-200">
+                {usageSummary?.testRequests ?? 0}
               </p>
             </div>
 
@@ -419,7 +408,9 @@ export default function AppIntelligenceConsolePage() {
                 <thead className="bg-slate-950 text-xs uppercase tracking-wide text-slate-500">
                   <tr>
                     <th className="px-4 py-3">App</th>
-                    <th className="px-4 py-3">Requests</th>
+                    <th className="px-4 py-3">Total</th>
+                    <th className="px-4 py-3">Prod</th>
+                    <th className="px-4 py-3">Test</th>
                     <th className="px-4 py-3">Avg Quality</th>
                     <th className="px-4 py-3">Tokens</th>
                     <th className="px-4 py-3">Last Used</th>
@@ -442,6 +433,12 @@ export default function AppIntelligenceConsolePage() {
                           </div>
                         </td>
                         <td className="px-4 py-3">{app.requests}</td>
+                        <td className="px-4 py-3 text-green-300">
+                          {app.productionRequests ?? 0}
+                        </td>
+                        <td className="px-4 py-3 text-blue-300">
+                          {app.testRequests ?? 0}
+                        </td>
                         <td className="px-4 py-3">
                           {qualityApp?.averageQualityScore ?? "—"}
                         </td>
