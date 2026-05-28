@@ -108,6 +108,63 @@ export default function AppIntelligenceAppsPage() {
           </section>
         ) : null}
 
+
+        <section className="mt-6 rounded-2xl border border-slate-800 bg-slate-900/70 p-6">
+          <p className="text-xs uppercase tracking-[0.35em] text-yellow-400">
+            Apps Overview
+          </p>
+
+          <h2 className="mt-2 text-xl font-semibold">
+            How to read this apps list
+          </h2>
+
+          <p className="mt-2 max-w-4xl text-sm leading-6 text-slate-400">
+            This page shows every app currently connected to Embr App Intelligence.
+            Production requests represent real app usage. Test / Demo requests come
+            from smoke tests, console experiments, and development work. Use the
+            View button to inspect an individual app&apos;s profile, usage, quality,
+            and access status.
+          </p>
+
+          <div className="mt-5 grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+            <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
+              <p className="text-sm font-semibold text-slate-100">
+                App
+              </p>
+              <p className="mt-2 text-sm text-slate-400">
+                The app profile Embr used, such as MindShot Golf or a generic fallback profile.
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
+              <p className="text-sm font-semibold text-green-300">
+                Production
+              </p>
+              <p className="mt-2 text-sm text-slate-400">
+                Real customer/app traffic. This is the number that matters most for client reporting.
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
+              <p className="text-sm font-semibold text-blue-300">
+                Test / Demo
+              </p>
+              <p className="mt-2 text-sm text-slate-400">
+                Internal tests, console runs, smoke tests, and development checks.
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
+              <p className="text-sm font-semibold text-yellow-300">
+                Dashboard
+              </p>
+              <p className="mt-2 text-sm text-slate-400">
+                Opens the app-specific dashboard for deeper usage, quality, profile, and access details.
+              </p>
+            </div>
+          </div>
+        </section>
+
         <section className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
           <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-4">
             <p className="text-xs uppercase tracking-wide text-slate-500">
