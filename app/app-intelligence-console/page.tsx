@@ -451,53 +451,7 @@ func askEmbr(message: String) async throws -> String {
             userId, mode, memoryScope, message, and appContext.
           </p>
         </section>
-
-
-
-        <section className="mt-6 rounded-2xl border border-slate-800 bg-slate-900/70 p-6">
-          <div>
-            <p className="text-xs uppercase tracking-[0.35em] text-yellow-400">
-              SDK
-            </p>
-            <h2 className="mt-2 text-xl font-semibold">
-              Embr Intelligence SDK
-            </h2>
-            <p className="mt-1 text-sm text-slate-400">
-              The TypeScript SDK is the first client integration layer for apps using Embr.
-            </p>
-          </div>
-
-          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
-              <p className="text-xs uppercase tracking-wide text-slate-500">Package</p>
-              <p className="text-slate-100">@embr/intelligence</p>
-            </div>
-
-            <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
-              <p className="text-xs uppercase tracking-wide text-slate-500">Status</p>
-              <p className="text-green-400">SDK v0.1 Ready</p>
-            </div>
-
-            <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
-              <p className="text-xs uppercase tracking-wide text-slate-500">Methods</p>
-              <p className="text-slate-100">authCheck · getProfile · respond</p>
-            </div>
-
-            <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
-              <p className="text-xs uppercase tracking-wide text-slate-500">Repo</p>
-              <a
-                href="https://github.com/LilybirdAI/embr-intelligence-sdk"
-                className="text-yellow-300 hover:underline"
-                target="_blank"
-                rel="noreferrer"
-              >
-                GitHub SDK
-              </a>
-            </div>
-          </div>
-        </section>
-
-        <section className="mt-6 rounded-2xl border border-slate-800 bg-slate-900/70 p-6">
+<section className="mt-6 rounded-2xl border border-slate-800 bg-slate-900/70 p-6">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-xs uppercase tracking-[0.35em] text-yellow-400">
