@@ -25,6 +25,19 @@ type QualitySummary = {
   error?: string;
 };
 
+
+type AppProfileListResponse = {
+  ok?: boolean;
+  profiles?: Array<{
+    id: string;
+    name: string;
+    defaultMode: string;
+    tone: string;
+    purpose: string;
+  }>;
+  error?: string;
+};
+
 type UsageSummary = {
   ok?: boolean;
   totalRequests?: number;
@@ -93,6 +106,8 @@ export default function AppIntelligenceConsolePage() {
   const [result, setResult] = useState<AppIntelResponse | null>(null);
   const [raw, setRaw] = useState("");
   const [loading, setLoading] = useState(false);
+  const [profiles, setProfiles] = useState<AppProfileListResponse["profiles"]>([]);
+  const [profilesLoading, setProfilesLoading] = useState(false);
   const [usageSummary, setUsageSummary] = useState<UsageSummary | null>(null);
   const [qualitySummary, setQualitySummary] = useState<QualitySummary | null>(null);
   const [metricsLoading, setMetricsLoading] = useState(false);
@@ -100,9 +115,31 @@ export default function AppIntelligenceConsolePage() {
 
 
   useEffect(() => {
+    loadProfiles();
     loadMetrics();
   }, []);
 
+
+
+  async function loadProfiles() {
+    try {
+      setProfilesLoading(true);
+
+      const res = await fetch("/api/app-intelligence/profiles", {
+        cache: "no-store",
+      });
+
+      const data = (await res.json()) as AppProfileListResponse;
+
+      if (data.ok && Array.isArray(data.profiles)) {
+        setProfiles(data.profiles);
+      }
+    } catch {
+      setProfiles([]);
+    } finally {
+      setProfilesLoading(false);
+    }
+  }
 
   async function loadMetrics() {
     try {
@@ -249,6 +286,17 @@ func askEmbr(message: String) async throws -> String {
 }`;
   }
 
+
+
+  function applyProfile(appProfileId: string) {
+    setAppId(appProfileId);
+
+    const profile = profiles?.find((item) => item.id === appProfileId);
+
+    if (profile?.defaultMode) {
+      setMode("");
+    }
+  }
 
   async function runTest() {
     let parsedContext: unknown = {};
@@ -619,10 +667,36 @@ func askEmbr(message: String) async throws -> String {
               <span className="mb-1 block text-xs uppercase tracking-wide text-slate-500">
                 App ID
               </span>
+              <select
+                value={profiles?.some((profile) => profile.id === appId) ? appId : "__custom__"}
+                onChange={(event) => {
+                  if (event.target.value === "__custom__") {
+                    setAppId("");
+                    return;
+                  }
+
+                  applyProfile(event.target.value);
+                }}
+                className="w-full rounded-xl border border-slate-700 bg-slate-950 p-3 outline-none focus:border-yellow-500"
+              >
+                {profilesLoading ? (
+                  <option value={appId}>Loading profiles...</option>
+                ) : null}
+
+                {profiles?.map((profile) => (
+                  <option key={profile.id} value={profile.id}>
+                    {profile.name} — {profile.id}
+                  </option>
+                ))}
+
+                <option value="__custom__">Custom appId</option>
+              </select>
+
               <input
                 value={appId}
                 onChange={(event) => setAppId(event.target.value)}
-                className="w-full rounded-xl border border-slate-700 bg-slate-950 p-3 outline-none focus:border-yellow-500"
+                placeholder="custom-app-id"
+                className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 p-3 outline-none focus:border-yellow-500"
               />
             </label>
 
