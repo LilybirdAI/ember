@@ -13,8 +13,8 @@ export default function EmbrIntelligenceLandingPage() {
 
           <p className="mt-6 max-w-3xl text-lg leading-8 text-slate-300">
             Embr Intelligence is an embeddable AI layer for mobile and web apps.
-            It helps apps understand context, respond safely, track usage, and
-            measure response quality across real user interactions.
+            It helps apps understand user context, respond safely, track usage,
+            and measure response quality across real product interactions.
           </p>
 
           <div className="mt-10 flex flex-col gap-3 sm:flex-row">
@@ -45,7 +45,7 @@ export default function EmbrIntelligenceLandingPage() {
               Embr understands what is happening inside your app.
             </h2>
             <p className="mt-4 text-slate-400">
-              Send app screens, user state, progress, events, notes, or workflow
+              Send screens, user state, progress, notes, events, or workflow
               data. Embr responds with context instead of generic answers.
             </p>
           </div>
@@ -55,7 +55,7 @@ export default function EmbrIntelligenceLandingPage() {
               App Profiles
             </p>
             <h2 className="mt-3 text-2xl font-semibold">
-              Every app gets its own voice, purpose, and boundaries.
+              Every app gets its own purpose, tone, and boundaries.
             </h2>
             <p className="mt-4 text-slate-400">
               Coaching apps, therapy-style apps, caregiver tools, business
@@ -71,8 +71,8 @@ export default function EmbrIntelligenceLandingPage() {
               Usage, quality, and risk signals are tracked from day one.
             </h2>
             <p className="mt-4 text-slate-400">
-              Embr records usage, separates test from production, scores response
-              quality, and flags risky or low-quality output patterns.
+              Embr separates test from production, records usage, scores
+              response quality, and flags risky or low-quality output patterns.
             </p>
           </div>
         </div>
@@ -107,7 +107,7 @@ export default function EmbrIntelligenceLandingPage() {
       <section className="px-6 py-16">
         <div className="mx-auto max-w-6xl">
           <p className="text-xs uppercase tracking-[0.35em] text-yellow-400">
-            Use Cases
+            Built For
           </p>
 
           <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
