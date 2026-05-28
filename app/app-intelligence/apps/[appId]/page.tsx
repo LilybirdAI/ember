@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import AppIntelligenceNav from "../../AppIntelligenceNav";
+
 
 type ProfileResponse = {
   ok?: boolean;
@@ -127,6 +129,7 @@ export default function AppDashboardPage() {
   return (
     <main className="min-h-screen bg-slate-950 px-6 py-8 text-slate-100">
       <div className="mx-auto max-w-6xl">
+        <AppIntelligenceNav />
         <section className="rounded-2xl border border-slate-800 bg-slate-900/70 p-6">
           <p className="text-xs uppercase tracking-[0.35em] text-yellow-400">
             App Intelligence

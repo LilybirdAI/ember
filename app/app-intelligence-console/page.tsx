@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import AppIntelligenceNav from "../app-intelligence/AppIntelligenceNav";
+
 
 
 
@@ -408,6 +410,7 @@ func askEmbr(message: String) async throws -> String {
   return (
     <main className="min-h-screen bg-slate-950 px-6 py-8 text-slate-100">
       <div className="mx-auto max-w-6xl">
+        <AppIntelligenceNav />
 
 
         <section className="mt-6 rounded-2xl border border-slate-800 bg-slate-900/70 p-6">
