@@ -61,7 +61,7 @@ export default function LoginPage() {
 
         <p className="text-slate-400 mb-6">
           {mode === "login"
-            ? "Log in to your Embr workspace."
+            ? "Log in to your Embr Intelligence workspace."
             : "Create your Embr account."}
         </p>
 
