@@ -26,6 +26,21 @@ type QualitySummary = {
 };
 
 
+
+type AccessCheckResult = {
+  ok?: boolean;
+  email?: string;
+  appId?: string | null;
+  canAccessApp?: boolean | null;
+  visible?: {
+    ok?: boolean;
+    role?: string | null;
+    appIds?: string[];
+    allApps?: boolean;
+  };
+  error?: string;
+};
+
 type AppProfileListResponse = {
   ok?: boolean;
   profiles?: Array<{
@@ -106,6 +121,9 @@ export default function AppIntelligenceConsolePage() {
   const [result, setResult] = useState<AppIntelResponse | null>(null);
   const [raw, setRaw] = useState("");
   const [loading, setLoading] = useState(false);
+  const [accessEmail, setAccessEmail] = useState("matt@echosignalmedia.com");
+  const [accessCheck, setAccessCheck] = useState<AccessCheckResult | null>(null);
+  const [accessLoading, setAccessLoading] = useState(false);
   const [profiles, setProfiles] = useState<AppProfileListResponse["profiles"]>([]);
   const [profilesLoading, setProfilesLoading] = useState(false);
   const [usageSummary, setUsageSummary] = useState<UsageSummary | null>(null);
@@ -117,9 +135,32 @@ export default function AppIntelligenceConsolePage() {
   useEffect(() => {
     loadProfiles();
     loadMetrics();
+    loadAccessCheck();
   }, []);
 
 
+
+
+  async function loadAccessCheck() {
+    try {
+      setAccessLoading(true);
+
+      const res = await fetch(
+        `/api/app-intelligence/access/check?email=${encodeURIComponent(accessEmail)}&appId=${encodeURIComponent(appId)}`,
+        { cache: "no-store" }
+      );
+
+      const data = (await res.json()) as AccessCheckResult;
+      setAccessCheck(data);
+    } catch (error) {
+      setAccessCheck({
+        ok: false,
+        error: error instanceof Error ? error.message : "Unknown access check error",
+      });
+    } finally {
+      setAccessLoading(false);
+    }
+  }
 
   async function loadProfiles() {
     try {
@@ -367,6 +408,89 @@ func askEmbr(message: String) async throws -> String {
   return (
     <main className="min-h-screen bg-slate-950 px-6 py-8 text-slate-100">
       <div className="mx-auto max-w-6xl">
+
+
+        <section className="mt-6 rounded-2xl border border-slate-800 bg-slate-900/70 p-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p className="text-xs uppercase tracking-[0.35em] text-yellow-400">
+                Access Preview
+              </p>
+              <h2 className="mt-2 text-xl font-semibold">
+                App Owner Access
+              </h2>
+              <p className="mt-1 text-sm text-slate-400">
+                Preview which apps a future dashboard user can access.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={loadAccessCheck}
+              disabled={accessLoading}
+              className="rounded-xl border border-slate-700 px-4 py-3 text-sm font-semibold text-slate-100 hover:bg-slate-800 disabled:opacity-60"
+            >
+              {accessLoading ? "Checking..." : "Check Access"}
+            </button>
+          </div>
+
+          <div className="mt-4 grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+            <label className="text-sm">
+              <span className="mb-1 block text-xs uppercase tracking-wide text-slate-500">
+                Viewer Email
+              </span>
+              <input
+                value={accessEmail}
+                onChange={(event) => setAccessEmail(event.target.value)}
+                className="w-full rounded-xl border border-slate-700 bg-slate-950 p-3 outline-none focus:border-yellow-500"
+              />
+            </label>
+
+            <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
+              <p className="text-xs uppercase tracking-wide text-slate-500">
+                Role
+              </p>
+              <p className="text-slate-100">
+                {accessCheck?.visible?.role || "Unknown"}
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
+              <p className="text-xs uppercase tracking-wide text-slate-500">
+                All Apps
+              </p>
+              <p className={accessCheck?.visible?.allApps ? "text-green-400" : "text-slate-100"}>
+                {accessCheck?.visible?.allApps ? "Yes" : "No"}
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
+              <p className="text-xs uppercase tracking-wide text-slate-500">
+                Can Access Selected App
+              </p>
+              <p className={accessCheck?.canAccessApp ? "text-green-400" : "text-red-400"}>
+                {accessCheck?.canAccessApp ? "Yes" : "No"}
+              </p>
+            </div>
+          </div>
+
+          {accessCheck?.visible?.appIds?.length ? (
+            <div className="mt-4 rounded-xl border border-slate-800 bg-slate-950 p-4">
+              <p className="text-xs uppercase tracking-wide text-slate-500">
+                Visible App IDs
+              </p>
+              <p className="mt-2 text-sm text-slate-300">
+                {accessCheck.visible.appIds.join(", ")}
+              </p>
+            </div>
+          ) : null}
+
+          {accessCheck?.error ? (
+            <div className="mt-4 rounded-xl border border-red-500/50 bg-red-500/10 p-4 text-sm text-red-200">
+              {accessCheck.error}
+            </div>
+          ) : null}
+        </section>
 
         <section className="mt-6 rounded-2xl border border-slate-800 bg-slate-900/70 p-6">
           <div>
