@@ -133,6 +133,123 @@ export default function AppIntelligenceConsolePage() {
     loadMetrics();
   }, []);
 
+
+  function getCurrentPayload() {
+    let parsedContext: unknown = {};
+
+    try {
+      parsedContext = appContext.trim() ? JSON.parse(appContext) : {};
+    } catch {
+      parsedContext = {
+        error: "App Context JSON is invalid.",
+        raw: appContext,
+      };
+    }
+
+    const payload: Record<string, unknown> = {
+      appId,
+      userId,
+      environment,
+      memoryScope,
+      message,
+      appContext: parsedContext,
+    };
+
+    if (mode.trim()) {
+      payload.mode = mode.trim();
+    }
+
+    return payload;
+  }
+
+  async function copyToClipboard(value: string) {
+    try {
+      await navigator.clipboard.writeText(value);
+    } catch {
+      const textArea = document.createElement("textarea");
+      textArea.value = value;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textArea);
+    }
+  }
+
+  function getJavaScriptSnippet() {
+    return `await fetch("https://YOUR-EMBR-SERVER/app-intelligence/respond", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    "x-embr-app-id": "${appId}",
+    "x-embr-app-key": "YOUR_APP_KEY"
+  },
+  body: JSON.stringify(${JSON.stringify(getCurrentPayload(), null, 2)})
+});`;
+  }
+
+  function getReactNativeSnippet() {
+    return `async function askEmbr(message: string) {
+  const res = await fetch("https://YOUR-EMBR-SERVER/app-intelligence/respond", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-embr-app-id": "${appId}",
+      "x-embr-app-key": process.env.EXPO_PUBLIC_EMBR_APP_KEY ?? ""
+    },
+    body: JSON.stringify({
+      ...${JSON.stringify(getCurrentPayload(), null, 6)},
+      message
+    })
+  });
+
+  const data = await res.json();
+  return data.text || data.response || data.content;
+}`;
+  }
+
+  function getSwiftSnippet() {
+    return `struct EmbrRequest: Encodable {
+    let appId: String
+    let userId: String
+    let environment: String
+    let memoryScope: String
+    let message: String
+    let appContext: [String: String]
+}
+
+func askEmbr(message: String) async throws -> String {
+    let url = URL(string: "https://YOUR-EMBR-SERVER/app-intelligence/respond")!
+    var request = URLRequest(url: url)
+    request.httpMethod = "POST"
+    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+    request.setValue("${appId}", forHTTPHeaderField: "x-embr-app-id")
+    request.setValue("YOUR_APP_KEY", forHTTPHeaderField: "x-embr-app-key")
+
+    let body = EmbrRequest(
+        appId: "${appId}",
+        userId: "${userId}",
+        environment: "${environment}",
+        memoryScope: "${memoryScope}",
+        message: message,
+        appContext: [
+            "screen": "current_screen",
+            "mood": "user_mood"
+        ]
+    )
+
+    request.httpBody = try JSONEncoder().encode(body)
+
+    let (data, _) = try await URLSession.shared.data(for: request)
+    let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+
+    return json?["text"] as? String
+        ?? json?["response"] as? String
+        ?? json?["content"] as? String
+        ?? ""
+}`;
+  }
+
+
   async function runTest() {
     let parsedContext: unknown = {};
 
@@ -467,6 +584,35 @@ export default function AppIntelligenceConsolePage() {
           ) : null}
         </section>
 
+
+        <section className="mt-6 rounded-2xl border border-slate-800 bg-slate-900/70 p-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-xs uppercase tracking-[0.35em] text-yellow-400">
+                Payload
+              </p>
+              <h2 className="mt-2 text-xl font-semibold">
+                Current Integration Payload
+              </h2>
+              <p className="mt-1 text-sm text-slate-400">
+                Copy the exact JSON payload currently configured in the console.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => copyToClipboard(JSON.stringify(getCurrentPayload(), null, 2))}
+              className="rounded-xl border border-slate-700 px-4 py-3 text-sm font-semibold text-slate-100 hover:bg-slate-800"
+            >
+              Copy Payload
+            </button>
+          </div>
+
+          <pre className="mt-4 max-h-96 overflow-auto whitespace-pre-wrap rounded-xl border border-slate-800 bg-slate-950 p-4 text-xs text-slate-300">
+            {JSON.stringify(getCurrentPayload(), null, 2)}
+          </pre>
+        </section>
+
         <section className="mt-6 rounded-2xl border border-slate-800 bg-slate-900/70 p-6">
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
             <label className="text-sm">
@@ -583,9 +729,18 @@ export default function AppIntelligenceConsolePage() {
 
           <div className="mt-5 grid gap-4 lg:grid-cols-3">
             <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
-              <p className="text-sm font-semibold text-slate-100">
-                JavaScript / Web
-              </p>
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm font-semibold text-slate-100">
+                  JavaScript / Web
+                </p>
+                <button
+                  type="button"
+                  onClick={() => copyToClipboard(getJavaScriptSnippet())}
+                  className="rounded-lg border border-slate-700 px-3 py-2 text-xs text-yellow-300 hover:bg-slate-800"
+                >
+                  Copy JavaScript
+                </button>
+              </div>
               <pre className="mt-3 max-h-96 overflow-auto whitespace-pre-wrap rounded-lg bg-slate-900 p-3 text-xs text-slate-300">
 {`await fetch("https://YOUR-EMBR-SERVER/app-intelligence/respond", {
   method: "POST",
@@ -612,9 +767,18 @@ export default function AppIntelligenceConsolePage() {
             </div>
 
             <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
-              <p className="text-sm font-semibold text-slate-100">
-                React Native / Expo
-              </p>
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm font-semibold text-slate-100">
+                  React Native / Expo
+                </p>
+                <button
+                  type="button"
+                  onClick={() => copyToClipboard(getReactNativeSnippet())}
+                  className="rounded-lg border border-slate-700 px-3 py-2 text-xs text-yellow-300 hover:bg-slate-800"
+                >
+                  Copy RN
+                </button>
+              </div>
               <pre className="mt-3 max-h-96 overflow-auto whitespace-pre-wrap rounded-lg bg-slate-900 p-3 text-xs text-slate-300">
 {`async function askEmbr(message: string) {
   const res = await fetch("https://YOUR-EMBR-SERVER/app-intelligence/respond", {
@@ -646,9 +810,18 @@ export default function AppIntelligenceConsolePage() {
             </div>
 
             <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
-              <p className="text-sm font-semibold text-slate-100">
-                Swift / iOS
-              </p>
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm font-semibold text-slate-100">
+                  Swift / iOS
+                </p>
+                <button
+                  type="button"
+                  onClick={() => copyToClipboard(getSwiftSnippet())}
+                  className="rounded-lg border border-slate-700 px-3 py-2 text-xs text-yellow-300 hover:bg-slate-800"
+                >
+                  Copy Swift
+                </button>
+              </div>
               <pre className="mt-3 max-h-96 overflow-auto whitespace-pre-wrap rounded-lg bg-slate-900 p-3 text-xs text-slate-300">
 {`struct EmbrRequest: Encodable {
     let appId: String
@@ -762,7 +935,18 @@ func askEmbr(message: String) async throws -> String {
               </div>
             ) : null}
 
-            <details className="mt-4 rounded-xl border border-slate-800 bg-slate-950 p-4">
+            {result?.appId ? (
+            <div className="mt-4">
+              <a
+                href={`/app-intelligence/apps/${result.appId}`}
+                className="inline-flex rounded-xl border border-slate-700 px-4 py-3 text-sm font-semibold text-yellow-300 hover:bg-slate-800"
+              >
+                Open App Dashboard
+              </a>
+            </div>
+          ) : null}
+
+          <details className="mt-4 rounded-xl border border-slate-800 bg-slate-950 p-4">
               <summary className="cursor-pointer text-sm text-slate-300">
                 Raw JSON
               </summary>
