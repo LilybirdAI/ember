@@ -567,6 +567,135 @@ export default function AppIntelligenceConsolePage() {
           </div>
         </section>
 
+
+        <section className="mt-6 rounded-2xl border border-slate-800 bg-slate-900/70 p-6">
+          <div>
+            <p className="text-xs uppercase tracking-[0.35em] text-yellow-400">
+              Integration
+            </p>
+            <h2 className="mt-2 text-xl font-semibold">
+              App Intelligence API Snippets
+            </h2>
+            <p className="mt-1 text-sm text-slate-400">
+              Starter examples for wiring Embr into web, React Native, and iOS apps.
+            </p>
+          </div>
+
+          <div className="mt-5 grid gap-4 lg:grid-cols-3">
+            <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
+              <p className="text-sm font-semibold text-slate-100">
+                JavaScript / Web
+              </p>
+              <pre className="mt-3 max-h-96 overflow-auto whitespace-pre-wrap rounded-lg bg-slate-900 p-3 text-xs text-slate-300">
+{`await fetch("https://YOUR-EMBR-SERVER/app-intelligence/respond", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    "x-embr-app-id": "mindshot-golf",
+    "x-embr-app-key": "YOUR_APP_KEY"
+  },
+  body: JSON.stringify({
+    appId: "mindshot-golf",
+    userId: currentUser.id,
+    environment: "production",
+    memoryScope: "app_user",
+    message: userMessage,
+    appContext: {
+      screen: "round_summary",
+      score: 87,
+      missPattern: "short right",
+      mood: "frustrated"
+    }
+  })
+});`}
+              </pre>
+            </div>
+
+            <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
+              <p className="text-sm font-semibold text-slate-100">
+                React Native / Expo
+              </p>
+              <pre className="mt-3 max-h-96 overflow-auto whitespace-pre-wrap rounded-lg bg-slate-900 p-3 text-xs text-slate-300">
+{`async function askEmbr(message: string) {
+  const res = await fetch("https://YOUR-EMBR-SERVER/app-intelligence/respond", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-embr-app-id": "mindshot-golf",
+      "x-embr-app-key": process.env.EXPO_PUBLIC_EMBR_APP_KEY ?? ""
+    },
+    body: JSON.stringify({
+      appId: "mindshot-golf",
+      userId: user.id,
+      environment: "production",
+      memoryScope: "app_user",
+      message,
+      appContext: {
+        screen: "round_summary",
+        score,
+        missPattern,
+        mood
+      }
+    })
+  });
+
+  const data = await res.json();
+  return data.text || data.response || data.content;
+}`}
+              </pre>
+            </div>
+
+            <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
+              <p className="text-sm font-semibold text-slate-100">
+                Swift / iOS
+              </p>
+              <pre className="mt-3 max-h-96 overflow-auto whitespace-pre-wrap rounded-lg bg-slate-900 p-3 text-xs text-slate-300">
+{`struct EmbrRequest: Encodable {
+    let appId: String
+    let userId: String
+    let environment: String
+    let memoryScope: String
+    let message: String
+    let appContext: [String: String]
+}
+
+func askEmbr(message: String) async throws -> String {
+    let url = URL(string: "https://YOUR-EMBR-SERVER/app-intelligence/respond")!
+    var request = URLRequest(url: url)
+    request.httpMethod = "POST"
+    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+    request.setValue("mindshot-golf", forHTTPHeaderField: "x-embr-app-id")
+    request.setValue("YOUR_APP_KEY", forHTTPHeaderField: "x-embr-app-key")
+
+    let body = EmbrRequest(
+        appId: "mindshot-golf",
+        userId: "user_123",
+        environment: "production",
+        memoryScope: "app_user",
+        message: message,
+        appContext: [
+            "screen": "round_summary",
+            "mood": "frustrated",
+            "missPattern": "short right"
+        ]
+    )
+
+    request.httpBody = try JSONEncoder().encode(body)
+
+    let (data, _) = try await URLSession.shared.data(for: request)
+    let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+
+    return json?["text"] as? String
+        ?? json?["response"] as? String
+        ?? json?["content"] as? String
+        ?? ""
+}`}
+              </pre>
+            </div>
+          </div>
+        </section>
+
+
         {result ? (
           <section className="mt-6 rounded-2xl border border-slate-800 bg-slate-900/70 p-6">
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
