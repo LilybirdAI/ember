@@ -484,8 +484,25 @@ export default function EmbrPage() {
 
   async function handleLogout() {
     clearSelectedImages();
-    await supabaseBrowser.auth.signOut();
-    router.replace("/login");
+
+    try {
+      const { error } = await supabaseBrowser.auth.signOut();
+
+      if (error) {
+        console.error("Logout error:", error);
+      }
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
+
+    try {
+      localStorage.clear();
+      sessionStorage.clear();
+    } catch (error) {
+      console.error("Could not clear browser storage:", error);
+    }
+
+    window.location.href = "/login";
   }
 
   async function loadUsage() {
@@ -893,7 +910,7 @@ setMessages((prev) => [
       <main className="min-h-screen bg-slate-950 text-white p-6 flex items-center justify-center">
         <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6 text-center">
           <h1 className="text-3xl font-bold text-yellow-400 mb-2">Embr</h1>
-          <p className="text-slate-400">Loading your workspace... CLEAN TEST 123</p>
+          <p className="text-slate-400">Loading your workspace...</p>
         </div>
       </main>
     );

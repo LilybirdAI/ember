@@ -1,4 +1,5 @@
 import { getUserFromRequest, isAuthError } from "@/lib/authServer";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export const runtime = "nodejs";
 
@@ -17,6 +18,76 @@ async function getOptionalUserId(request: Request) {
     console.warn("Could not resolve Embr user id:", error);
     return null;
   }
+}
+
+function cleanString(value: unknown, fallback = "") {
+  if (typeof value !== "string") return fallback;
+  return value.trim();
+}
+
+function makeConversationTitle(message: string) {
+  const cleaned = message.trim().replace(/\s+/g, " ");
+  if (!cleaned) return "New Embr conversation";
+  return cleaned.length > 80 ? `${cleaned.slice(0, 77)}...` : cleaned;
+}
+
+async function saveChatTurn(input: {
+  userId: string;
+  conversationId?: string | null;
+  userMessage: string;
+  assistantMessage: string;
+  projectType?: string | null;
+  projectId?: string | null;
+}) {
+  const now = new Date().toISOString();
+  let conversationId = cleanString(input.conversationId);
+
+  if (!conversationId) {
+    const { data, error } = await supabaseAdmin
+      .from("conversations")
+      .insert({
+        user_id: input.userId,
+        title: makeConversationTitle(input.userMessage),
+        project_type: input.projectType || "general",
+        project_id: input.projectId || null,
+        created_at: now,
+        updated_at: now,
+      })
+      .select("id")
+      .single();
+
+    if (error) throw error;
+    conversationId = data.id;
+  } else {
+    const { error } = await supabaseAdmin
+      .from("conversations")
+      .update({ updated_at: now })
+      .eq("id", conversationId)
+      .eq("user_id", input.userId);
+
+    if (error) throw error;
+  }
+
+  const { error: messageError } = await supabaseAdmin.from("messages").insert([
+    {
+      conversation_id: conversationId,
+      user_id: input.userId,
+      role: "user",
+      content: input.userMessage,
+      created_at: now,
+    },
+    {
+      conversation_id: conversationId,
+      user_id: input.userId,
+      role: "assistant",
+      content: input.assistantMessage,
+      created_at: new Date().toISOString(),
+    },
+  ]);
+
+  if (messageError) throw messageError;
+
+  return conversationId;
 }
 
 export async function GET() {
@@ -111,8 +182,10 @@ export async function POST(request: Request) {
       );
     }
 
+    let data: any;
+
     try {
-      JSON.parse(text || "{}");
+      data = JSON.parse(text || "{}");
     } catch {
       return Response.json(
         {
@@ -125,12 +198,40 @@ export async function POST(request: Request) {
       );
     }
 
-    return new Response(text, {
-      status: upstream.status,
-      headers: {
-        "Content-Type": "application/json",
+    let conversationId = cleanString(body.conversationId);
+
+
+    if (upstream.ok && userId) {
+      const userMessage = cleanString(body.message);
+      const assistantMessage = cleanString(
+        data.response || data.content || data.text || data.output
+      );
+
+      if (userMessage && assistantMessage) {
+        try {
+          conversationId = await saveChatTurn({
+            userId,
+            conversationId,
+            userMessage,
+            assistantMessage,
+            projectType: cleanString(body.projectType, "general"),
+            projectId: cleanString(body.projectId) || null,
+          });
+        } catch (saveError) {
+          console.error("Could not save Embr conversation:", saveError);
+        }
+      }
+    }
+
+    return Response.json(
+      {
+        ...(data && typeof data === "object" && !Array.isArray(data)
+          ? data
+          : { response: text }),
+        conversationId: conversationId || data.conversationId || null,
       },
-    });
+      { status: upstream.status }
+    );
   } catch (error) {
     console.error("Embr chat proxy error:", error);
 
