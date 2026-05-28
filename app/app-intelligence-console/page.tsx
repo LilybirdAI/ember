@@ -367,6 +367,76 @@ func askEmbr(message: String) async throws -> String {
   return (
     <main className="min-h-screen bg-slate-950 px-6 py-8 text-slate-100">
       <div className="mx-auto max-w-6xl">
+
+        <section className="mt-6 rounded-2xl border border-slate-800 bg-slate-900/70 p-6">
+          <div>
+            <p className="text-xs uppercase tracking-[0.35em] text-yellow-400">
+              Developer SDK
+            </p>
+            <h2 className="mt-2 text-xl font-semibold">
+              @embr/intelligence SDK v0.2
+            </h2>
+            <p className="mt-1 text-sm text-slate-400">
+              The SDK provides a clean integration layer for apps that use Embr App Intelligence.
+            </p>
+          </div>
+
+          <div className="mt-5 grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+            {[
+              {
+                name: "authCheck()",
+                description: "Verify baseUrl, appId, app profile, and app-key status without spending AI tokens."
+              },
+              {
+                name: "getProfile()",
+                description: "Load the app profile, default mode, tone, purpose, and boundaries for the current appId."
+              },
+              {
+                name: "respond()",
+                description: "Send a user message and appContext to Embr and receive an app-aware AI response."
+              },
+              {
+                name: "getUsageSummary()",
+                description: "Fetch global App Intelligence usage totals, including production/test traffic."
+              },
+              {
+                name: "getQualitySummary()",
+                description: "Fetch response quality summary metrics across App Intelligence activity."
+              },
+              {
+                name: "getUsage() / getQuality()",
+                description: "Fetch recent usage and quality events for the configured appId."
+              }
+            ].map((method) => (
+              <div
+                key={method.name}
+                className="rounded-xl border border-slate-800 bg-slate-950 p-4"
+              >
+                <p className="font-mono text-sm font-semibold text-yellow-300">
+                  {method.name}
+                </p>
+                <p className="mt-2 text-sm leading-6 text-slate-400">
+                  {method.description}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-5 rounded-xl border border-slate-800 bg-slate-950 p-4">
+            <p className="text-xs uppercase tracking-wide text-slate-500">
+              SDK Repository
+            </p>
+            <a
+              href="https://github.com/LilybirdAI/embr-intelligence-sdk"
+              target="_blank"
+              rel="noreferrer"
+              className="mt-2 inline-flex text-yellow-300 hover:underline"
+            >
+              github.com/LilybirdAI/embr-intelligence-sdk
+            </a>
+          </div>
+        </section>
+
         <section className="rounded-2xl border border-slate-800 bg-slate-900/70 p-6">
           <p className="text-xs uppercase tracking-[0.35em] text-yellow-400">
             Embr App Intelligence
