@@ -295,6 +295,7 @@ export default function AppIntelligenceConsolePage() {
                     <th className="px-4 py-3">Requests</th>
                     <th className="px-4 py-3">Tokens</th>
                     <th className="px-4 py-3">Last Used</th>
+                    <th className="px-4 py-3">Dashboard</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800 bg-slate-900/50">
@@ -448,6 +449,14 @@ export default function AppIntelligenceConsolePage() {
                           {app.lastUsedAt
                             ? new Date(app.lastUsedAt).toLocaleString()
                             : "Unknown"}
+                        </td>
+                        <td className="px-4 py-3">
+                          <a
+                            href={`/app-intelligence/apps/${app.appId}`}
+                            className="rounded-lg border border-slate-700 px-3 py-2 text-xs font-semibold text-yellow-300 hover:bg-slate-800"
+                          >
+                            View
+                          </a>
                         </td>
                       </tr>
                     );
