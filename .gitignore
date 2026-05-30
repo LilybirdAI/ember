@@ -46,3 +46,6 @@ backups/
 *.bak
 .env
 .env*.local
+
+# Local patch backups
+*.backup-*

@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import AppIntelligenceNav from "../../AppIntelligenceNav";
-
 
 type ProfileResponse = {
   ok?: boolean;
@@ -21,6 +20,8 @@ type ProfileResponse = {
 
 type UsageResponse = {
   ok?: boolean;
+  source?: string;
+  fallbackFrom?: string;
   events?: Array<{
     id: string;
     time: string;
@@ -37,16 +38,54 @@ type UsageResponse = {
 
 type QualityResponse = {
   ok?: boolean;
+  source?: string;
+  fallbackFrom?: string;
   events?: Array<{
     id: string;
     time: string;
+    appId?: string;
+    appName?: string;
+    mode?: string;
+    engine?: string;
+    model?: string;
     qualityScore: number;
+    contextUsed?: boolean;
+    profileFollowed?: boolean;
+    actionable?: boolean;
+    displayReady?: boolean;
     inventedDataRisk: boolean;
     boundaryRisk: boolean;
     placeholderRisk: boolean;
+    notes?: string[];
   }>;
   error?: string;
 };
+
+function formatDate(value?: string | null) {
+  if (!value) return "No activity yet";
+
+  try {
+    return new Date(value).toLocaleString();
+  } catch {
+    return value;
+  }
+}
+
+function formatNumber(value?: number | null) {
+  return new Intl.NumberFormat().format(value || 0);
+}
+
+function dataSourceLabel(source?: string) {
+  if (source === "supabase") return "Live database";
+  if (source === "jsonl") return "Fallback log storage";
+  return "Checking source";
+}
+
+function environmentLabel(value?: string) {
+  if (value === "production") return "Production";
+  if (value === "staging") return "Staging";
+  return "Internal Testing";
+}
 
 export default function AppDashboardPage() {
   const params = useParams<{ appId: string }>();
@@ -101,7 +140,7 @@ export default function AppDashboardPage() {
     (event) => event.environment === "production"
   ).length;
 
-  const testRequests = usageEvents.filter(
+  const internalTestingRequests = usageEvents.filter(
     (event) => event.environment !== "production"
   ).length;
 
@@ -117,7 +156,7 @@ export default function AppDashboardPage() {
       )
     : 0;
 
-  const riskFlags = qualityEvents.reduce((sum, event) => {
+  const needsReviewCount = qualityEvents.reduce((sum, event) => {
     return (
       sum +
       Number(event.inventedDataRisk) +
@@ -126,34 +165,88 @@ export default function AppDashboardPage() {
     );
   }, 0);
 
+  const appHealth = useMemo(() => {
+    if (!usageEvents.length) {
+      return {
+        label: "Waiting for data",
+        detail: "No recent app requests have been recorded yet.",
+        className: "border-slate-700 bg-slate-800/50 text-slate-300",
+      };
+    }
+
+    if (needsReviewCount > 0) {
+      return {
+        label: "Needs review",
+        detail: "Embr detected one or more quality or safety review signals.",
+        className: "border-yellow-500/40 bg-yellow-500/10 text-yellow-300",
+      };
+    }
+
+    if (averageQuality >= 90) {
+      return {
+        label: "Healthy",
+        detail: "Recent responses are passing quality checks.",
+        className: "border-emerald-500/40 bg-emerald-500/10 text-emerald-300",
+      };
+    }
+
+    return {
+      label: "Watch",
+      detail: "Quality is acceptable, but this app may need profile tuning.",
+      className: "border-blue-500/40 bg-blue-500/10 text-blue-300",
+    };
+  }, [averageQuality, needsReviewCount, usageEvents.length]);
+
+  const latestUsage = usageEvents[0];
+  const latestQuality = qualityEvents[0];
+
   return (
     <main className="min-h-screen bg-slate-950 px-6 py-8 text-slate-100">
       <div className="mx-auto max-w-6xl">
         <AppIntelligenceNav />
-        <section className="rounded-2xl border border-slate-800 bg-slate-900/70 p-6">
-          <p className="text-xs uppercase tracking-[0.35em] text-yellow-400">
-            App Intelligence
-          </p>
 
-          <h1 className="mt-3 text-3xl font-bold">
-            {profile?.profile?.name || appId}
-          </h1>
+        <section className="overflow-hidden rounded-2xl border border-slate-800 bg-gradient-to-br from-slate-900 via-slate-900 to-slate-950 p-6 shadow-2xl shadow-black/30">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <p className="text-xs uppercase tracking-[0.35em] text-yellow-400">
+                App Dashboard
+              </p>
 
-          <p className="mt-2 max-w-3xl text-slate-400">
-            {profile?.profile?.purpose ||
-              "Per-app usage and quality dashboard for Embr App Intelligence."}
-          </p>
+              <h1 className="mt-3 text-3xl font-bold">
+                {profile?.profile?.name || appId}
+              </h1>
 
-          <div className="mt-4 flex flex-wrap gap-2 text-xs">
-            <span className="rounded-full border border-slate-700 px-3 py-1 text-slate-300">
-              appId: {appId}
-            </span>
-            <span className="rounded-full border border-slate-700 px-3 py-1 text-slate-300">
-              known: {profile?.known ? "yes" : "no"}
-            </span>
-            <span className="rounded-full border border-slate-700 px-3 py-1 text-slate-300">
-              default mode: {profile?.profile?.defaultMode || "unknown"}
-            </span>
+              <p className="mt-3 max-w-3xl text-slate-400">
+                {profile?.profile?.purpose ||
+                  "Monitor usage, response quality, integration status, and app-specific behavior for this Embr-powered app."}
+              </p>
+
+              <div className="mt-4 flex flex-wrap gap-2 text-xs">
+                <span className={`rounded-full border px-3 py-1 font-semibold ${appHealth.className}`}>
+                  {appHealth.label}
+                </span>
+
+                <span className="rounded-full border border-slate-700 px-3 py-1 text-slate-300">
+                  App ID: {appId}
+                </span>
+
+                <span className="rounded-full border border-slate-700 px-3 py-1 text-slate-300">
+                  Profile: {profile?.known ? "Configured" : "Generic fallback"}
+                </span>
+
+                <span className="rounded-full border border-slate-700 px-3 py-1 text-slate-300">
+                  Mode: {profile?.profile?.defaultMode || "unknown"}
+                </span>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-slate-800 bg-slate-950 p-4 text-sm text-slate-400 lg:w-80">
+              <p className="font-semibold text-slate-100">Integration Status</p>
+              <p className="mt-2">{appHealth.detail}</p>
+              <p className="mt-3 text-xs text-slate-500">
+                Last activity: {formatDate(latestUsage?.time)}
+              </p>
+            </div>
           </div>
         </section>
 
@@ -169,124 +262,141 @@ export default function AppDashboardPage() {
           </section>
         ) : null}
 
-
-        <section className="mt-6 rounded-2xl border border-slate-800 bg-slate-900/70 p-6">
-          <p className="text-xs uppercase tracking-[0.35em] text-yellow-400">
-            Dashboard Guide
-          </p>
-
-          <h2 className="mt-2 text-xl font-semibold">
-            How to read this dashboard
-          </h2>
-
-          <p className="mt-2 max-w-4xl text-sm leading-6 text-slate-400">
-            This dashboard shows how Embr is performing inside this specific app.
-            Production requests are real app usage. Test / Demo requests are internal
-            testing, smoke tests, and console experiments. Average Quality measures
-            how well Embr used app context, followed the app profile, gave useful
-            next steps, stayed display-ready, and avoided risk flags.
-          </p>
-
-          <div className="mt-5 grid gap-3 md:grid-cols-2 lg:grid-cols-4">
-            <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
-              <p className="text-sm font-semibold text-green-300">
-                Production
-              </p>
-              <p className="mt-2 text-sm text-slate-400">
-                Real app traffic. This is what matters most for usage, billing,
-                and client reporting.
-              </p>
-            </div>
-
-            <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
-              <p className="text-sm font-semibold text-blue-300">
-                Test / Demo
-              </p>
-              <p className="mt-2 text-sm text-slate-400">
-                Internal testing traffic from smoke tests, the console, demos, or
-                development work.
-              </p>
-            </div>
-
-            <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
-              <p className="text-sm font-semibold text-yellow-300">
-                Avg Quality
-              </p>
-              <p className="mt-2 text-sm text-slate-400">
-                Embr&apos;s response-quality score based on context use, profile fit,
-                actionability, display readiness, and risk checks.
-              </p>
-            </div>
-
-            <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
-              <p className="text-sm font-semibold text-red-300">
-                Risk Flags
-              </p>
-              <p className="mt-2 text-sm text-slate-400">
-                Potential safety or reliability issues detected by the quality
-                evaluator, such as boundary risk or invented-data risk.
-              </p>
-            </div>
-          </div>
-        </section>
-
         <section className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
           <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-4">
             <p className="text-xs uppercase tracking-wide text-slate-500">
-              Requests
+              AI Requests
             </p>
-            <p className="text-2xl font-semibold">{usageEvents.length}</p>
+            <p className="mt-1 text-2xl font-semibold">
+              {formatNumber(usageEvents.length)}
+            </p>
+            <p className="mt-1 text-xs text-slate-500">
+              Recent app calls
+            </p>
           </div>
 
           <div className="rounded-xl border border-green-500/30 bg-green-500/10 p-4">
             <p className="text-xs uppercase tracking-wide text-green-300">
-              Production
+              Production Usage
             </p>
-            <p className="text-2xl font-semibold text-green-200">
-              {productionRequests}
+            <p className="mt-1 text-2xl font-semibold text-green-200">
+              {formatNumber(productionRequests)}
+            </p>
+            <p className="mt-1 text-xs text-green-200/70">
+              Real app traffic
             </p>
           </div>
 
           <div className="rounded-xl border border-blue-500/30 bg-blue-500/10 p-4">
             <p className="text-xs uppercase tracking-wide text-blue-300">
-              Test / Demo
+              Internal Testing
             </p>
-            <p className="text-2xl font-semibold text-blue-200">
-              {testRequests}
+            <p className="mt-1 text-2xl font-semibold text-blue-200">
+              {formatNumber(internalTestingRequests)}
+            </p>
+            <p className="mt-1 text-xs text-blue-200/70">
+              Test, demo, staging
             </p>
           </div>
 
           <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-4">
             <p className="text-xs uppercase tracking-wide text-slate-500">
-              Tokens
+              AI Usage
             </p>
-            <p className="text-2xl font-semibold">{totalTokens}</p>
+            <p className="mt-1 text-2xl font-semibold">
+              {formatNumber(totalTokens)}
+            </p>
+            <p className="mt-1 text-xs text-slate-500">
+              Token usage signal
+            </p>
           </div>
 
-          <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-4">
-            <p className="text-xs uppercase tracking-wide text-slate-500">
-              Avg Quality
+          <div className="rounded-xl border border-yellow-500/30 bg-yellow-500/10 p-4">
+            <p className="text-xs uppercase tracking-wide text-yellow-300">
+              Quality Score
             </p>
-            <p className="text-2xl font-semibold">{averageQuality}</p>
+            <p className="mt-1 text-2xl font-semibold text-yellow-200">
+              {averageQuality || "—"}
+            </p>
+            <p className="mt-1 text-xs text-yellow-200/70">
+              Recent average
+            </p>
+          </div>
+        </section>
+
+        <section className="mt-6 grid gap-6 lg:grid-cols-3">
+          <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-6 lg:col-span-2">
+            <p className="text-xs uppercase tracking-[0.35em] text-yellow-400">
+              App Intelligence Profile
+            </p>
+            <h2 className="mt-2 text-xl font-semibold">Behavior Layer</h2>
+            <p className="mt-3 text-sm leading-6 text-slate-400">
+              {profile?.profile?.tone || "No app-specific tone configured yet."}
+            </p>
+
+            <div className="mt-5 grid gap-3 sm:grid-cols-3">
+              <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
+                <p className="text-xs uppercase tracking-wide text-slate-500">
+                  Profile
+                </p>
+                <p className="mt-1 font-semibold text-slate-100">
+                  {profile?.known ? "Configured" : "Generic"}
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
+                <p className="text-xs uppercase tracking-wide text-slate-500">
+                  Default Mode
+                </p>
+                <p className="mt-1 font-semibold text-slate-100">
+                  {profile?.profile?.defaultMode || "unknown"}
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
+                <p className="text-xs uppercase tracking-wide text-slate-500">
+                  Data Source
+                </p>
+                <p className="mt-1 font-semibold text-slate-100">
+                  {dataSourceLabel(usage?.source || quality?.source)}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-6">
+            <p className="text-xs uppercase tracking-[0.35em] text-yellow-400">
+              Needs Review
+            </p>
+            <h2 className="mt-2 text-xl font-semibold">
+              {formatNumber(needsReviewCount)} signals
+            </h2>
+            <p className="mt-3 text-sm leading-6 text-slate-400">
+              Review signals include boundary risk, invented-data risk, and placeholder
+              language. Zero means recent responses passed without major risk flags.
+            </p>
+
+            <div className="mt-5 rounded-xl border border-slate-800 bg-slate-950 p-4 text-sm text-slate-400">
+              Latest quality check:{" "}
+              <span className="font-semibold text-slate-100">
+                {latestQuality ? `${latestQuality.qualityScore}/100` : "No checks yet"}
+              </span>
+            </div>
           </div>
         </section>
 
         <section className="mt-6 rounded-2xl border border-slate-800 bg-slate-900/70 p-6">
-          <h2 className="text-xl font-semibold">Profile</h2>
-          <p className="mt-2 text-sm text-slate-400">
-            {profile?.profile?.tone || "No tone configured."}
-          </p>
-        </section>
-
-        <section className="mt-6 rounded-2xl border border-slate-800 bg-slate-900/70 p-6">
-          <h2 className="text-xl font-semibold">Quality</h2>
-          <p className="mt-2 text-sm text-slate-400">
-            Recent evaluations: {qualityEvents.length} · Risk flags: {riskFlags}
-          </p>
-        </section>
-
-        <section className="mt-6 rounded-2xl border border-slate-800 bg-slate-900/70 p-6">
-          <h2 className="text-xl font-semibold">Recent Usage</h2>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-xl font-semibold">Recent App Activity</h2>
+              <p className="mt-1 text-sm text-slate-400">
+                Latest Embr requests for this app, separated by environment and usage signal.
+              </p>
+            </div>
+            <span className="rounded-full border border-slate-700 px-3 py-1 text-xs text-slate-300">
+              {dataSourceLabel(usage?.source)}
+            </span>
+          </div>
 
           {usageEvents.length ? (
             <div className="mt-4 overflow-hidden rounded-xl border border-slate-800">
@@ -296,22 +406,30 @@ export default function AppDashboardPage() {
                     <th className="px-4 py-3">Time</th>
                     <th className="px-4 py-3">Environment</th>
                     <th className="px-4 py-3">Mode</th>
-                    <th className="px-4 py-3">Tokens</th>
+                    <th className="px-4 py-3">AI Usage</th>
                     <th className="px-4 py-3">Engine</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800 bg-slate-900/50">
                   {usageEvents.map((event) => (
-                    <tr key={event.id}>
+                    <tr key={event.id} className="hover:bg-slate-800/40">
                       <td className="px-4 py-3 text-slate-400">
-                        {new Date(event.time).toLocaleString()}
+                        {formatDate(event.time)}
                       </td>
                       <td className="px-4 py-3">
-                        {event.environment || "test"}
+                        <span
+                          className={
+                            event.environment === "production"
+                              ? "rounded-full border border-green-500/30 bg-green-500/10 px-2 py-1 text-xs font-semibold text-green-300"
+                              : "rounded-full border border-blue-500/30 bg-blue-500/10 px-2 py-1 text-xs font-semibold text-blue-300"
+                          }
+                        >
+                          {environmentLabel(event.environment)}
+                        </span>
                       </td>
                       <td className="px-4 py-3">{event.mode}</td>
-                      <td className="px-4 py-3">{event.totalTokens ?? "—"}</td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3">{formatNumber(event.totalTokens)}</td>
+                      <td className="px-4 py-3 text-slate-400">
                         {event.engine} / {event.model}
                       </td>
                     </tr>
@@ -320,9 +438,75 @@ export default function AppDashboardPage() {
               </table>
             </div>
           ) : (
-            <p className="mt-4 text-sm text-slate-400">
+            <div className="mt-4 rounded-xl border border-slate-800 bg-slate-950 p-6 text-sm text-slate-400">
               No usage events yet for this app.
-            </p>
+            </div>
+          )}
+        </section>
+
+        <section className="mt-6 rounded-2xl border border-slate-800 bg-slate-900/70 p-6">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-xl font-semibold">Quality Monitoring</h2>
+              <p className="mt-1 text-sm text-slate-400">
+                Recent response-quality evaluations for this app.
+              </p>
+            </div>
+            <span className="rounded-full border border-slate-700 px-3 py-1 text-xs text-slate-300">
+              {dataSourceLabel(quality?.source)}
+            </span>
+          </div>
+
+          {qualityEvents.length ? (
+            <div className="mt-4 overflow-hidden rounded-xl border border-slate-800">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-slate-950 text-xs uppercase tracking-wide text-slate-500">
+                  <tr>
+                    <th className="px-4 py-3">Time</th>
+                    <th className="px-4 py-3">Quality Score</th>
+                    <th className="px-4 py-3">Needs Review</th>
+                    <th className="px-4 py-3">Notes</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800 bg-slate-900/50">
+                  {qualityEvents.map((event) => {
+                    const reviewSignals =
+                      Number(event.inventedDataRisk) +
+                      Number(event.boundaryRisk) +
+                      Number(event.placeholderRisk);
+
+                    return (
+                      <tr key={event.id} className="hover:bg-slate-800/40">
+                        <td className="px-4 py-3 text-slate-400">
+                          {formatDate(event.time)}
+                        </td>
+                        <td className="px-4 py-3 font-semibold">
+                          {event.qualityScore}/100
+                        </td>
+                        <td className="px-4 py-3">
+                          {reviewSignals ? (
+                            <span className="rounded-full border border-yellow-500/30 bg-yellow-500/10 px-2 py-1 text-xs font-semibold text-yellow-300">
+                              {reviewSignals} signal{reviewSignals === 1 ? "" : "s"}
+                            </span>
+                          ) : (
+                            <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-1 text-xs font-semibold text-emerald-300">
+                              Clear
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-slate-400">
+                          {event.notes?.[0] || "No notes recorded."}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="mt-4 rounded-xl border border-slate-800 bg-slate-950 p-6 text-sm text-slate-400">
+              No quality evaluations yet for this app.
+            </div>
           )}
         </section>
       </div>
