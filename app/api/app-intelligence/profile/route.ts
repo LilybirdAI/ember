@@ -4,7 +4,7 @@ export async function GET(req: Request) {
   const baseUrl =
     process.env.EMBR_SERVER_URL ||
     process.env.NEXT_PUBLIC_EMBR_SERVER_URL ||
-    "http://192.241.175.200:3001";
+    "https://api.embrintelligence.ai";
 
   const url = new URL(req.url);
   const appId = url.searchParams.get("appId") || "";

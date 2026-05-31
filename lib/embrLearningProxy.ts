@@ -1,5 +1,5 @@
 const EMBR_SERVER_URL =
-  process.env.EMBR_SERVER_URL || "http://192.241.175.200:3001";
+  process.env.EMBR_SERVER_URL || "https://api.embrintelligence.ai";
 
 function jsonError(message: string, status = 500) {
   return Response.json(

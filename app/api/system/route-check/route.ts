@@ -4,7 +4,7 @@ export async function POST(req: Request) {
   const baseUrl =
     process.env.EMBR_SERVER_URL ||
     process.env.NEXT_PUBLIC_EMBR_SERVER_URL ||
-    "http://192.241.175.200:3001";
+    "https://api.embrintelligence.ai";
 
   try {
     const body = await req.json();
