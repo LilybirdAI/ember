@@ -4,7 +4,7 @@ export async function GET() {
   const baseUrl =
     process.env.EMBR_SERVER_URL ||
     process.env.NEXT_PUBLIC_EMBR_SERVER_URL ||
-    "http://142.93.204.154:3001";
+    "http://192.241.175.200:3001";
 
   try {
     const upstream = await fetch(`${baseUrl}/app-intelligence/usage/summary`, {
