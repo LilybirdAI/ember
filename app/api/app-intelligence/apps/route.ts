@@ -10,24 +10,36 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const limit = url.searchParams.get("limit") || "500";
 
-  try {
-    const upstream = await fetch(
-      `${EMBR_SERVER_URL}/app-intelligence/apps?limit=${encodeURIComponent(limit)}`,
-      {
-        method: "GET",
-        cache: "no-store",
-      }
-    );
+  const upstreamUrl = `${EMBR_SERVER_URL}/app-intelligence/apps?limit=${encodeURIComponent(limit)}`;
 
+  try {
+    const upstream = await fetch(upstreamUrl, {
+      method: "GET",
+      cache: "no-store",
+    });
+
+    const contentType = upstream.headers.get("content-type") || "";
     const text = await upstream.text();
+
+    if (!contentType.includes("application/json")) {
+      return Response.json(
+        {
+          ok: false,
+          error: "Embr upstream returned non-JSON response.",
+          upstreamStatus: upstream.status,
+          upstreamUrl,
+          preview: text.slice(0, 300),
+        },
+        { status: 200 }
+      );
+    }
 
     return new Response(
       text || JSON.stringify({ ok: false, error: "Empty response from Embr server" }),
       {
         status: upstream.status,
         headers: {
-          "content-type":
-            upstream.headers.get("content-type") || "application/json",
+          "content-type": "application/json",
         },
       }
     );
@@ -39,6 +51,7 @@ export async function GET(req: Request) {
           error instanceof Error
             ? error.message
             : "Unknown App Intelligence apps proxy error",
+        upstreamUrl,
       },
       { status: 200 }
     );
