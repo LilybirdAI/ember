@@ -61,6 +61,27 @@ type QualityResponse = {
   error?: string;
 };
 
+type RegisteredAppsResponse = {
+  ok?: boolean;
+  source?: string;
+  apps?: Array<{
+    appId: string;
+    appName: string;
+    defaultMode?: string;
+    status?: string;
+    ownerLabel?: string | null;
+    createdAt?: string | null;
+    updatedAt?: string | null;
+    requests?: number;
+    productionRequests?: number;
+    stagingRequests?: number;
+    testRequests?: number;
+    totalTokens?: number;
+    lastUsedAt?: string | null;
+  }>;
+  error?: string;
+};
+
 function formatDate(value?: string | null) {
   if (!value) return "No activity yet";
 
@@ -94,13 +115,14 @@ export default function AppDashboardPage() {
   const [profile, setProfile] = useState<ProfileResponse | null>(null);
   const [usage, setUsage] = useState<UsageResponse | null>(null);
   const [quality, setQuality] = useState<QualityResponse | null>(null);
+  const [registeredApps, setRegisteredApps] = useState<RegisteredAppsResponse | null>(null);
   const [loading, setLoading] = useState(true);
 
   async function loadDashboard() {
     try {
       setLoading(true);
 
-      const [profileRes, usageRes, qualityRes] = await Promise.all([
+      const [profileRes, usageRes, qualityRes, appsRes] = await Promise.all([
         fetch(`/api/app-intelligence/profile?appId=${encodeURIComponent(appId)}`, {
           cache: "no-store",
         }),
@@ -110,11 +132,15 @@ export default function AppDashboardPage() {
         fetch(`/api/app-intelligence/quality?appId=${encodeURIComponent(appId)}&limit=25`, {
           cache: "no-store",
         }),
+        fetch("/api/app-intelligence/apps?limit=500", {
+          cache: "no-store",
+        }),
       ]);
 
       setProfile((await profileRes.json()) as ProfileResponse);
       setUsage((await usageRes.json()) as UsageResponse);
       setQuality((await qualityRes.json()) as QualityResponse);
+      setRegisteredApps((await appsRes.json()) as RegisteredAppsResponse);
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Unknown dashboard load error";
@@ -122,6 +148,7 @@ export default function AppDashboardPage() {
       setProfile({ ok: false, error: message });
       setUsage({ ok: false, error: message });
       setQuality({ ok: false, error: message });
+      setRegisteredApps({ ok: false, error: message });
     } finally {
       setLoading(false);
     }
@@ -135,6 +162,7 @@ export default function AppDashboardPage() {
 
   const usageEvents = usage?.events || [];
   const qualityEvents = quality?.events || [];
+  const registeredApp = registeredApps?.apps?.find((app) => app.appId === appId);
 
   const productionRequests = usageEvents.filter(
     (event) => event.environment === "production"
@@ -213,7 +241,7 @@ export default function AppDashboardPage() {
               </p>
 
               <h1 className="mt-3 text-3xl font-bold">
-                {profile?.profile?.name || appId}
+                {registeredApp?.appName || profile?.profile?.name || appId}
               </h1>
 
               <p className="mt-3 max-w-3xl text-slate-400">
@@ -235,7 +263,7 @@ export default function AppDashboardPage() {
                 </span>
 
                 <span className="rounded-full border border-slate-700 px-3 py-1 text-slate-300">
-                  Mode: {profile?.profile?.defaultMode || "unknown"}
+                  Mode: {registeredApp?.defaultMode || profile?.profile?.defaultMode || "unknown"}
                 </span>
               </div>
             </div>
@@ -243,9 +271,12 @@ export default function AppDashboardPage() {
             <div className="rounded-xl border border-slate-800 bg-slate-950 p-4 text-sm text-slate-400 lg:w-80">
               <p className="font-semibold text-slate-100">Integration Status</p>
               <p className="mt-2">{appHealth.detail}</p>
-              <p className="mt-3 text-xs text-slate-500">
-                Last activity: {formatDate(latestUsage?.time)}
-              </p>
+              <div className="mt-4 space-y-2 text-xs text-slate-500">
+                <p>Status: <span className="text-slate-300">{registeredApp?.status || "test"}</span></p>
+                <p>Owner: <span className="text-slate-300">{registeredApp?.ownerLabel || "Unassigned"}</span></p>
+                <p>Created: <span className="text-slate-300">{formatDate(registeredApp?.createdAt)}</span></p>
+                <p>Last activity: <span className="text-slate-300">{formatDate(latestUsage?.time || registeredApp?.lastUsedAt)}</span></p>
+              </div>
             </div>
           </div>
         </section>
@@ -322,6 +353,96 @@ export default function AppDashboardPage() {
               Recent average
             </p>
           </div>
+        </section>
+
+        <section className="mt-6 rounded-2xl border border-slate-800 bg-slate-900/70 p-6">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <p className="text-xs uppercase tracking-[0.35em] text-yellow-400">
+                Registered App
+              </p>
+              <h2 className="mt-2 text-xl font-semibold">SaaS App Record</h2>
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
+                This is the registered Embr app record stored in Supabase. Usage and quality
+                data are layered on top once the app starts sending requests.
+              </p>
+            </div>
+
+            <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-300">
+              {dataSourceLabel(registeredApps?.source)}
+            </span>
+          </div>
+
+          <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
+              <p className="text-xs uppercase tracking-wide text-slate-500">Status</p>
+              <p className="mt-1 font-semibold text-slate-100">{registeredApp?.status || "test"}</p>
+            </div>
+
+            <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
+              <p className="text-xs uppercase tracking-wide text-slate-500">Owner</p>
+              <p className="mt-1 font-semibold text-slate-100">{registeredApp?.ownerLabel || "Unassigned"}</p>
+            </div>
+
+            <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
+              <p className="text-xs uppercase tracking-wide text-slate-500">Default Mode</p>
+              <p className="mt-1 font-semibold text-slate-100">
+                {registeredApp?.defaultMode || profile?.profile?.defaultMode || "assistant"}
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
+              <p className="text-xs uppercase tracking-wide text-slate-500">Created</p>
+              <p className="mt-1 font-semibold text-slate-100">{formatDate(registeredApp?.createdAt)}</p>
+            </div>
+          </div>
+        </section>
+
+        <section className="mt-6 rounded-2xl border border-yellow-500/20 bg-yellow-500/5 p-6">
+          <p className="text-xs uppercase tracking-[0.35em] text-yellow-400">
+            Integration
+          </p>
+          <h2 className="mt-2 text-xl font-semibold">Connect this app to Embr</h2>
+          <p className="mt-2 max-w-4xl text-sm leading-6 text-slate-400">
+            Use this app ID when sending requests to the Embr API. Future API key handling
+            will live here once per-app keys are enabled.
+          </p>
+
+          <div className="mt-5 grid gap-4 lg:grid-cols-2">
+            <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
+              <p className="text-xs uppercase tracking-wide text-slate-500">API Endpoint</p>
+              <pre className="mt-3 overflow-auto rounded-lg bg-slate-900 p-3 text-xs text-slate-300">
+{`POST https://api.embrintelligence.ai/app-intelligence/respond`}
+              </pre>
+            </div>
+
+            <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
+              <p className="text-xs uppercase tracking-wide text-slate-500">App ID</p>
+              <pre className="mt-3 overflow-auto rounded-lg bg-slate-900 p-3 text-xs text-yellow-300">
+{appId}
+              </pre>
+            </div>
+          </div>
+
+          <pre className="mt-4 overflow-auto rounded-xl border border-slate-800 bg-slate-950 p-4 text-xs leading-5 text-slate-300">
+{`const response = await fetch("https://api.embrintelligence.ai/app-intelligence/respond", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    "x-embr-app-id": "${appId}"
+  },
+  body: JSON.stringify({
+    appId: "${appId}",
+    userId: "user_123",
+    environment: "production",
+    message: "What should I focus on next?",
+    appContext: {
+      screen: "dashboard",
+      currentTask: "first integration"
+    }
+  })
+});`}
+          </pre>
         </section>
 
         <section className="mt-6 grid gap-6 lg:grid-cols-3">
