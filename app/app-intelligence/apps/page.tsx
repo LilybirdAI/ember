@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import AppIntelligenceNav from "../AppIntelligenceNav";
 
 type AppsSummary = {
@@ -36,6 +36,35 @@ type AppsSummary = {
   error?: string;
 };
 
+type CreateAppResult = {
+  ok?: boolean;
+  type?: string;
+  source?: string;
+  app?: {
+    app_id?: string;
+    name?: string;
+    default_mode?: string;
+    status?: string;
+    owner_label?: string | null;
+  };
+  member?: {
+    app_id?: string;
+    email?: string;
+    role?: string;
+  } | null;
+  reason?: string;
+  error?: string;
+};
+
+type CreateAppForm = {
+  name: string;
+  appId: string;
+  defaultMode: string;
+  status: string;
+  ownerEmail: string;
+  ownerLabel: string;
+};
+
 function formatDate(value?: string | null) {
   if (!value) return "No activity yet";
 
@@ -59,6 +88,16 @@ function dataSourceLabel(source?: string) {
 export default function AppIntelligenceAppsPage() {
   const [summary, setSummary] = useState<AppsSummary | null>(null);
   const [loading, setLoading] = useState(true);
+  const [creating, setCreating] = useState(false);
+  const [createResult, setCreateResult] = useState<CreateAppResult | null>(null);
+  const [createForm, setCreateForm] = useState<CreateAppForm>({
+    name: "",
+    appId: "",
+    defaultMode: "assistant",
+    status: "test",
+    ownerEmail: "",
+    ownerLabel: "",
+  });
 
   async function loadApps() {
     try {
@@ -77,6 +116,81 @@ export default function AppIntelligenceAppsPage() {
       });
     } finally {
       setLoading(false);
+    }
+  }
+
+  function slugify(value: string) {
+    return value
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 80);
+  }
+
+  function updateCreateForm(key: keyof CreateAppForm, value: string) {
+    setCreateForm((current) => {
+      const next = {
+        ...current,
+        [key]: value,
+      };
+
+      if (key === "name" && !current.appId.trim()) {
+        next.appId = slugify(value);
+      }
+
+      if (key === "appId") {
+        next.appId = slugify(value);
+      }
+
+      return next;
+    });
+  }
+
+  async function createApp(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    try {
+      setCreating(true);
+      setCreateResult(null);
+
+      const res = await fetch("/api/app-intelligence/apps/create", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: createForm.name,
+          appId: createForm.appId,
+          defaultMode: createForm.defaultMode,
+          status: createForm.status,
+          ownerEmail: createForm.ownerEmail || null,
+          ownerLabel: createForm.ownerLabel || null,
+        }),
+      });
+
+      const data = (await res.json()) as CreateAppResult;
+      setCreateResult(data);
+
+      if (data.ok) {
+        setCreateForm({
+          name: "",
+          appId: "",
+          defaultMode: "assistant",
+          status: "test",
+          ownerEmail: "",
+          ownerLabel: "",
+        });
+
+        await loadApps();
+      }
+    } catch (error) {
+      setCreateResult({
+        ok: false,
+        error: error instanceof Error ? error.message : "Unknown create app error",
+      });
+    } finally {
+      setCreating(false);
     }
   }
 
@@ -215,6 +329,124 @@ export default function AppIntelligenceAppsPage() {
               Token-based usage signal
             </p>
           </div>
+        </section>
+
+        <section className="mt-6 rounded-2xl border border-yellow-500/20 bg-yellow-500/5 p-6">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p className="text-xs uppercase tracking-[0.35em] text-yellow-400">
+                App Onboarding
+              </p>
+              <h2 className="mt-2 text-xl font-semibold">Create Connected App</h2>
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
+                Register a real app in Embr. The app will appear in Connected Apps immediately,
+                even before it sends its first request.
+              </p>
+            </div>
+
+            <span className="rounded-full border border-slate-700 px-3 py-1 text-xs font-semibold text-slate-300">
+              Admin protected
+            </span>
+          </div>
+
+          <form onSubmit={createApp} className="mt-5 grid gap-4 lg:grid-cols-6">
+            <label className="lg:col-span-2">
+              <span className="text-xs uppercase tracking-wide text-slate-500">App Name</span>
+              <input
+                value={createForm.name}
+                onChange={(event) => updateCreateForm("name", event.target.value)}
+                required
+                placeholder="Client App"
+                className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-3 text-sm text-slate-100 outline-none focus:border-yellow-400"
+              />
+            </label>
+
+            <label className="lg:col-span-2">
+              <span className="text-xs uppercase tracking-wide text-slate-500">App ID</span>
+              <input
+                value={createForm.appId}
+                onChange={(event) => updateCreateForm("appId", event.target.value)}
+                required
+                placeholder="client-app"
+                className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-3 text-sm text-slate-100 outline-none focus:border-yellow-400"
+              />
+            </label>
+
+            <label>
+              <span className="text-xs uppercase tracking-wide text-slate-500">Mode</span>
+              <select
+                value={createForm.defaultMode}
+                onChange={(event) => updateCreateForm("defaultMode", event.target.value)}
+                className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-3 text-sm text-slate-100 outline-none focus:border-yellow-400"
+              >
+                <option value="assistant">assistant</option>
+                <option value="coach">coach</option>
+                <option value="companion">companion</option>
+                <option value="operator">operator</option>
+                <option value="support">support</option>
+                <option value="motivator">motivator</option>
+              </select>
+            </label>
+
+            <label>
+              <span className="text-xs uppercase tracking-wide text-slate-500">Status</span>
+              <select
+                value={createForm.status}
+                onChange={(event) => updateCreateForm("status", event.target.value)}
+                className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-3 text-sm text-slate-100 outline-none focus:border-yellow-400"
+              >
+                <option value="test">test</option>
+                <option value="staging">staging</option>
+                <option value="production">production</option>
+              </select>
+            </label>
+
+            <label className="lg:col-span-3">
+              <span className="text-xs uppercase tracking-wide text-slate-500">Owner Email</span>
+              <input
+                value={createForm.ownerEmail}
+                onChange={(event) => updateCreateForm("ownerEmail", event.target.value)}
+                placeholder="owner@example.com"
+                className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-3 text-sm text-slate-100 outline-none focus:border-yellow-400"
+              />
+            </label>
+
+            <label className="lg:col-span-3">
+              <span className="text-xs uppercase tracking-wide text-slate-500">Owner Label</span>
+              <input
+                value={createForm.ownerLabel}
+                onChange={(event) => updateCreateForm("ownerLabel", event.target.value)}
+                placeholder="Client / Project label"
+                className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-3 text-sm text-slate-100 outline-none focus:border-yellow-400"
+              />
+            </label>
+
+            <div className="lg:col-span-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+              <button
+                type="submit"
+                disabled={creating}
+                className="rounded-xl bg-yellow-500 px-4 py-3 text-sm font-semibold text-slate-950 hover:bg-yellow-400 disabled:opacity-60"
+              >
+                {creating ? "Creating..." : "Create Connected App"}
+              </button>
+
+              {createResult ? (
+                <div
+                  className={
+                    createResult.ok
+                      ? "rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300"
+                      : "rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200"
+                  }
+                >
+                  {createResult.ok
+                    ? `Created ${createResult.app?.app_id || "app"}`
+                    : createResult.reason === "app_id_already_exists"
+                      ? "That app ID already exists."
+                      : createResult.error || "Create app failed."}
+                </div>
+              ) : null}
+            </div>
+          </form>
         </section>
 
         <section className="mt-6 rounded-2xl border border-slate-800 bg-slate-900/70 p-6">
