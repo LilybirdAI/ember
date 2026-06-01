@@ -1,32 +1,46 @@
+export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET(req: Request) {
-  const baseUrl =
-    process.env.EMBR_SERVER_URL ||
-    process.env.NEXT_PUBLIC_EMBR_SERVER_URL ||
-    "https://api.embrintelligence.ai";
+const EMBR_SERVER_URL =
+  process.env.EMBR_SERVER_URL ||
+  process.env.NEXT_PUBLIC_EMBR_SERVER_URL ||
+  "https://api.embrintelligence.ai";
 
+export async function GET(req: Request) {
   const url = new URL(req.url);
   const appId = url.searchParams.get("appId") || "";
 
-  if (!appId) {
-    return Response.json({ ok: false, error: "Missing appId" }, { status: 400 });
+  if (!appId.trim()) {
+    return Response.json(
+      {
+        ok: false,
+        error: "Missing appId",
+      },
+      { status: 400 }
+    );
   }
 
   try {
     const upstream = await fetch(
-      `${baseUrl}/app-intelligence/profile/${encodeURIComponent(appId)}`,
-      { method: "GET", cache: "no-store" }
+      `${EMBR_SERVER_URL}/app-intelligence/profile/${encodeURIComponent(appId)}`,
+      {
+        method: "GET",
+        cache: "no-store",
+      }
     );
 
     const text = await upstream.text();
 
-    return new Response(text, {
-      status: upstream.status,
-      headers: {
-        "content-type": upstream.headers.get("content-type") || "application/json",
-      },
-    });
+    return new Response(
+      text || JSON.stringify({ ok: false, error: "Empty response from Embr server" }),
+      {
+        status: upstream.status,
+        headers: {
+          "content-type":
+            upstream.headers.get("content-type") || "application/json",
+        },
+      }
+    );
   } catch (error) {
     return Response.json(
       {
