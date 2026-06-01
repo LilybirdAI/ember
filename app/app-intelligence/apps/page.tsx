@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import AppIntelligenceNav from "../AppIntelligenceNav";
 
-type UsageSummary = {
+type AppsSummary = {
   ok?: boolean;
   source?: string;
   fallbackFrom?: string;
@@ -15,6 +15,8 @@ type UsageSummary = {
   totalTokens?: number;
   placeholderGuardrailCount?: number;
   appCount?: number;
+  registeredAppCount?: number;
+  activeAppCount?: number;
   apps?: Array<{
     appId: string;
     appName: string;
@@ -25,6 +27,11 @@ type UsageSummary = {
     totalTokens: number;
     placeholderGuardrailCount?: number;
     lastUsedAt: string | null;
+    defaultMode?: string;
+    status?: string;
+    ownerLabel?: string | null;
+    createdAt?: string | null;
+    updatedAt?: string | null;
   }>;
   error?: string;
 };
@@ -50,18 +57,18 @@ function dataSourceLabel(source?: string) {
 }
 
 export default function AppIntelligenceAppsPage() {
-  const [summary, setSummary] = useState<UsageSummary | null>(null);
+  const [summary, setSummary] = useState<AppsSummary | null>(null);
   const [loading, setLoading] = useState(true);
 
   async function loadApps() {
     try {
       setLoading(true);
 
-      const res = await fetch("/api/app-intelligence/usage/summary", {
+      const res = await fetch("/api/app-intelligence/apps?limit=500", {
         cache: "no-store",
       });
 
-      const data = (await res.json()) as UsageSummary;
+      const data = (await res.json()) as AppsSummary;
       setSummary(data);
     } catch (error) {
       setSummary({
@@ -79,10 +86,7 @@ export default function AppIntelligenceAppsPage() {
 
   const apps = summary?.apps || [];
 
-  const activeApps = useMemo(
-    () => apps.filter((app) => app.requests > 0).length,
-    [apps]
-  );
+  const activeApps = summary?.activeAppCount ?? apps.filter((app) => app.requests > 0).length;
 
   const internalTestingTotal =
     (summary?.testRequests || 0) + (summary?.stagingRequests || 0);
@@ -160,7 +164,7 @@ export default function AppIntelligenceAppsPage() {
               {formatNumber(summary?.appCount)}
             </p>
             <p className="mt-1 text-xs text-slate-500">
-              {activeApps} with recorded activity
+              {activeApps} active with usage
             </p>
           </div>
 
@@ -296,6 +300,7 @@ export default function AppIntelligenceAppsPage() {
                 <thead className="bg-slate-950 text-xs uppercase tracking-wide text-slate-500">
                   <tr>
                     <th className="px-4 py-3">App</th>
+                    <th className="px-4 py-3">Status</th>
                     <th className="px-4 py-3">AI Requests</th>
                     <th className="px-4 py-3">Production</th>
                     <th className="px-4 py-3">Internal Testing</th>
@@ -317,6 +322,22 @@ export default function AppIntelligenceAppsPage() {
                           </div>
                           <div className="text-xs text-slate-500">
                             {app.appId}
+                          </div>
+                          {app.ownerLabel ? (
+                            <div className="mt-1 text-xs text-slate-600">
+                              {app.ownerLabel}
+                            </div>
+                          ) : null}
+                        </td>
+
+                        <td className="px-4 py-3">
+                          <div className="flex flex-col gap-1">
+                            <span className="rounded-full border border-slate-700 px-2 py-1 text-xs font-semibold text-slate-300">
+                              {app.status || "test"}
+                            </span>
+                            <span className="text-xs text-slate-500">
+                              {app.defaultMode || "assistant"}
+                            </span>
                           </div>
                         </td>
 
@@ -356,8 +377,8 @@ export default function AppIntelligenceAppsPage() {
             </div>
           ) : (
             <div className="mt-4 rounded-xl border border-slate-800 bg-slate-950 p-6 text-sm text-slate-400">
-              No App Intelligence usage has been recorded yet. Once an app calls
-              Embr, it will appear here automatically.
+              No apps are registered yet. Create an app through the protected App Intelligence
+              admin endpoint and it will appear here before it has any usage.
             </div>
           )}
         </section>
