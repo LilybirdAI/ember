@@ -1,5 +1,58 @@
 import { NextResponse } from "next/server";
 
+type SystemStatus = {
+  ok?: boolean;
+  service?: string;
+  status?: string;
+  time?: string;
+  uptimeSeconds?: number;
+  nodeVersion?: string;
+  routeCheckAvailable?: boolean;
+  learningAvailable?: boolean;
+  error?: string;
+};
+
+type UsageApp = {
+  appId?: string;
+  appName?: string;
+  requests?: number;
+  productionRequests?: number;
+  testRequests?: number;
+  totalTokens?: number;
+  lastUsedAt?: string | null;
+};
+
+type QualityApp = {
+  appId?: string;
+  appName?: string;
+  responses?: number;
+  averageQualityScore?: number;
+  placeholderRiskCount?: number;
+  boundaryRiskCount?: number;
+  inventedDataRiskCount?: number;
+  lastEvaluatedAt?: string | null;
+};
+
+type RegisteredApp = {
+  appId?: string;
+  appName?: string;
+  defaultMode?: string;
+  status?: string;
+  ownerLabel?: string;
+};
+
+type UsageSummary = {
+  apps?: UsageApp[];
+};
+
+type QualitySummary = {
+  apps?: QualityApp[];
+};
+
+type RegisteredAppsSummary = {
+  apps?: RegisteredApp[];
+};
+
 const pendingBusinessData = {
   "mindshot-golf": {
     business: {
@@ -14,7 +67,7 @@ const pendingBusinessData = {
   },
 };
 
-async function fetchJson(path: string) {
+async function fetchJson<T>(path: string): Promise<T> {
   const baseUrl =
     process.env.EMBR_API_BASE_URL || "https://api.embrintelligence.ai";
 
@@ -26,12 +79,12 @@ async function fetchJson(path: string) {
     throw new Error(`${path} failed with ${res.status}`);
   }
 
-  return res.json();
+  return (await res.json()) as T;
 }
 
 export async function GET(
   _request: Request,
-  context: { params: Promise<{ appId: string }> }
+  context: { params: Promise<{ appId: string }> | { appId: string } }
 ) {
   const { appId } = await context.params;
   const pending = pendingBusinessData[appId as keyof typeof pendingBusinessData];
@@ -50,23 +103,15 @@ export async function GET(
   try {
     const [system, usageSummary, qualitySummary, registeredApps] =
       await Promise.all([
-        fetchJson("/system/status"),
-        fetchJson("/app-intelligence/usage/summary"),
-        fetchJson("/app-intelligence/quality/summary"),
-        fetchJson("/app-intelligence/apps"),
+        fetchJson<SystemStatus>("/system/status"),
+        fetchJson<UsageSummary>("/app-intelligence/usage/summary"),
+        fetchJson<QualitySummary>("/app-intelligence/quality/summary"),
+        fetchJson<RegisteredAppsSummary>("/app-intelligence/apps"),
       ]);
 
-    const usageApp = usageSummary.apps?.find(
-      (app: { appId?: string }) => app.appId === appId
-    );
-
-    const qualityApp = qualitySummary.apps?.find(
-      (app: { appId?: string }) => app.appId === appId
-    );
-
-    const registeredApp = registeredApps.apps?.find(
-      (app: { appId?: string }) => app.appId === appId
-    );
+    const usageApp = usageSummary.apps?.find((app) => app.appId === appId);
+    const qualityApp = qualitySummary.apps?.find((app) => app.appId === appId);
+    const registeredApp = registeredApps.apps?.find((app) => app.appId === appId);
 
     const isHealthy = Boolean(system.ok);
     const requests = usageApp?.requests ?? 0;
@@ -84,7 +129,7 @@ export async function GET(
     const monthlySummary =
       qualityScore !== null
         ? `MindShot has live Embr system health, registered app data, usage data, and quality data connected. Embr has logged ${requests} request${requests === 1 ? "" : "s"} for MindShot with a current quality score of ${qualityScore}/100. Business metrics are pending until MindShot user and subscription data sources are connected.`
-        : `MindShot has live Embr system health and usage data connected. Business metrics are pending until MindShot user and subscription data sources are connected.`;
+        : "MindShot has live Embr system health and usage data connected. Business metrics are pending until MindShot user and subscription data sources are connected.";
 
     return NextResponse.json({
       app: {

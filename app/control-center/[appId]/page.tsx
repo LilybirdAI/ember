@@ -213,7 +213,7 @@ export default function AppControlCenterPage() {
             <Metric label="Risk Flags" value={riskCount} />
           </div>
 
-          <div className="mt-5 grid gap-3 sm:grid-cols-2">
+          <div className="mt-5 grid gap-3 text-sm md:grid-cols-2">
             <Detail label="Last Used" value={formatMaybeDate(data.embr.lastUsedAt)} />
             <Detail
               label="Last Evaluated"
