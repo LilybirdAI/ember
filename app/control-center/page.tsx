@@ -12,6 +12,9 @@ type DashboardData = {
     embr: string;
     lastChecked: string;
     dataMode?: string;
+    ownerLabel?: string;
+    appMode?: string;
+    appEnvironment?: string;
   };
   system?: {
     ok?: boolean;
@@ -25,19 +28,28 @@ type DashboardData = {
     error?: string;
   };
   business: {
-    totalUsers: number;
-    activeUsers: number;
-    trialUsers: number;
-    payingUsers: number;
-    conversion: string;
-    estimatedRevenue: string;
+    totalUsers: string | number;
+    activeUsers: string | number;
+    trialUsers: string | number;
+    payingUsers: string | number;
+    conversion: string | number;
+    estimatedRevenue: string | number;
     dataMode?: string;
   };
   embr: {
     interactions: number;
+    productionRequests: number;
+    testRequests: number;
+    totalTokens: number;
     topQuestion: string;
     escalations: number;
     aiUsage: string;
+    qualityScore: number | null;
+    placeholderRiskCount: number;
+    boundaryRiskCount: number;
+    inventedDataRiskCount: number;
+    lastUsedAt: string | null;
+    lastEvaluatedAt: string | null;
     dataMode?: string;
   };
   attention: string[];
@@ -117,7 +129,7 @@ export default function ControlCenterPage() {
               {data.app.name} Control Center
             </h1>
             <p className="max-w-2xl text-slate-400">
-              A simple owner view of app health, users, revenue, Embr activity,
+              A simple owner view of app health, Embr activity, app intelligence,
               and what needs attention.
             </p>
           </div>
@@ -135,15 +147,15 @@ export default function ControlCenterPage() {
           <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
             <div>
               <p className="text-sm font-bold text-emerald-300">
-                Live Embr system health connected
+                Live Embr system, usage, and quality data connected
               </p>
               <p className="mt-1 text-sm text-emerald-100/80">
-                App health, backend status, Embr status, and last checked time
-                are coming from the live Embr backend.
+                App health, backend status, Embr status, usage, quality score,
+                and last checked time are coming from the live Embr backend.
               </p>
             </div>
             <p className="text-xs uppercase tracking-wide text-emerald-300">
-              {data.app.dataMode || "live"}
+              {data.embr.dataMode || "live"}
             </p>
           </div>
         </section>
@@ -156,7 +168,19 @@ export default function ControlCenterPage() {
         </section>
 
         <section className="grid gap-6 lg:grid-cols-2">
-          <Panel title="Business Snapshot" badge="Demo metrics">
+          <Panel title="App Details" badge="Live registration">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Metric label="Owner" value={data.app.ownerLabel || "Unknown"} />
+              <Metric label="App Mode" value={data.app.appMode || "Unknown"} />
+              <Metric
+                label="Environment"
+                value={data.app.appEnvironment || "Unknown"}
+              />
+              <Metric label="Last Checked" value={formatDate(data.app.lastChecked)} />
+            </div>
+          </Panel>
+
+          <Panel title="Business Snapshot" badge="Pending source">
             <div className="grid gap-3 sm:grid-cols-2">
               <Metric label="Total Users" value={data.business.totalUsers} />
               <Metric label="Active Users" value={data.business.activeUsers} />
@@ -169,37 +193,58 @@ export default function ControlCenterPage() {
               />
             </div>
             <p className="mt-4 text-xs text-slate-500">
-              User, trial, paying user, conversion, and revenue numbers are demo
-              placeholders until MindShot data sources are connected.
-            </p>
-          </Panel>
-
-          <Panel title="Embr Intelligence" badge="Partial demo">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Metric
-                label="Interactions This Month"
-                value={data.embr.interactions}
-              />
-              <Metric label="AI Usage" value={data.embr.aiUsage} />
-              <Metric label="Escalations" value={data.embr.escalations} />
-              <Metric label="Last Checked" value={formatDate(data.app.lastChecked)} />
-            </div>
-
-            <div className="mt-5 rounded-2xl border border-slate-800 bg-slate-950 p-4">
-              <p className="text-xs uppercase tracking-wide text-slate-500">
-                Top User Question
-              </p>
-              <p className="mt-2 text-lg font-semibold text-slate-100">
-                {data.embr.topQuestion}
-              </p>
-            </div>
-
-            <p className="mt-4 text-xs text-slate-500">
-              Interactions, top question, and usage labels are demo placeholders
-              until Embr interaction logs are connected.
+              These metrics are not being faked. They are pending until MindShot
+              user and subscription data sources are connected.
             </p>
           </Panel>
         </section>
+
+        <Panel title="Embr Intelligence" badge="Live Embr data">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <Metric label="Interactions" value={data.embr.interactions} />
+            <Metric label="AI Usage" value={data.embr.aiUsage} />
+            <Metric
+              label="Quality Score"
+              value={
+                data.embr.qualityScore === null
+                  ? "Unknown"
+                  : `${data.embr.qualityScore}/100`
+              }
+            />
+            <Metric label="Total Tokens" value={formatNumber(data.embr.totalTokens)} />
+            <Metric label="Production Requests" value={data.embr.productionRequests} />
+            <Metric label="Test Requests" value={data.embr.testRequests} />
+            <Metric
+              label="Placeholder Risks"
+              value={data.embr.placeholderRiskCount}
+            />
+            <Metric
+              label="Boundary Risks"
+              value={data.embr.boundaryRiskCount}
+            />
+          </div>
+
+          <div className="mt-5 rounded-2xl border border-slate-800 bg-slate-950 p-4">
+            <p className="text-xs uppercase tracking-wide text-slate-500">
+              Question Summary
+            </p>
+            <p className="mt-2 text-lg font-semibold text-slate-100">
+              {data.embr.topQuestion}
+            </p>
+            <p className="mt-2 text-xs text-slate-500">
+              Live usage and quality are connected. Question clustering/summaries
+              are coming next.
+            </p>
+          </div>
+
+          <div className="mt-5 grid gap-3 text-sm md:grid-cols-2">
+            <Detail label="Last Used" value={formatMaybeDate(data.embr.lastUsedAt)} />
+            <Detail
+              label="Last Evaluated"
+              value={formatMaybeDate(data.embr.lastEvaluatedAt)}
+            />
+          </div>
+        </Panel>
 
         <Panel title="What Needs Attention" badge="Owner view">
           <div className="space-y-3">
@@ -214,7 +259,7 @@ export default function ControlCenterPage() {
           </div>
         </Panel>
 
-        <Panel title="Monthly Summary" badge="Draft summary">
+        <Panel title="Monthly Summary" badge="Live Embr summary">
           <p className="text-slate-300">{data.monthlySummary}</p>
         </Panel>
 
@@ -320,4 +365,16 @@ function formatDate(value: string) {
   }
 
   return date.toLocaleString();
+}
+
+function formatMaybeDate(value: string | null) {
+  if (!value) {
+    return "Not available";
+  }
+
+  return formatDate(value);
+}
+
+function formatNumber(value: number) {
+  return new Intl.NumberFormat("en-US").format(value);
 }
