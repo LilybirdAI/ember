@@ -67,6 +67,30 @@ const pendingBusinessData = {
   },
 };
 
+
+async function fetchMindShotBusinessSummary() {
+  const url = process.env.MINDSHOT_DASHBOARD_URL;
+  const key = process.env.MINDSHOT_DASHBOARD_KEY;
+
+  if (!url || !key) {
+    return null;
+  }
+
+  const res = await fetch(url, {
+    cache: "no-store",
+    headers: {
+      "x-embr-dashboard-key": key,
+    },
+  });
+
+  if (!res.ok) {
+    console.warn(`MindShot dashboard summary failed with ${res.status}`);
+    return null;
+  }
+
+  return res.json();
+}
+
 async function fetchJson<T>(path: string): Promise<T> {
   const baseUrl =
     process.env.EMBR_API_BASE_URL || "https://api.embrintelligence.ai";
@@ -101,12 +125,13 @@ export async function GET(
   }
 
   try {
-    const [system, usageSummary, qualitySummary, registeredApps] =
+    const [system, usageSummary, qualitySummary, registeredApps, mindshotSummary] =
       await Promise.all([
         fetchJson<SystemStatus>("/system/status"),
         fetchJson<UsageSummary>("/app-intelligence/usage/summary"),
         fetchJson<QualitySummary>("/app-intelligence/quality/summary"),
         fetchJson<RegisteredAppsSummary>("/app-intelligence/apps"),
+        appId === "mindshot-golf" ? fetchMindShotBusinessSummary() : null,
       ]);
 
     const usageApp = usageSummary.apps?.find((app) => app.appId === appId);
@@ -146,7 +171,12 @@ export async function GET(
         appEnvironment: registeredApp?.status || "unknown",
       },
       system,
-      business: pending.business,
+      business: mindshotSummary?.business
+        ? {
+            ...mindshotSummary.business,
+            dataMode: "live-mindshot-supabase-partial",
+          }
+        : pending.business,
       embr: {
         interactions: requests,
         productionRequests: usageApp?.productionRequests ?? 0,
