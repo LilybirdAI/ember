@@ -1,12 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useState } from "react";
 
 export default function EmbrClientShellActions() {
   const pathname = usePathname();
-  const router = useRouter();
   const [signingOut, setSigningOut] = useState(false);
 
   const shouldShow =
@@ -17,15 +16,24 @@ export default function EmbrClientShellActions() {
   }
 
   async function signOut() {
+    if (signingOut) return;
+
     setSigningOut(true);
 
+    const timeout = new Promise((resolve) => {
+      setTimeout(resolve, 1200);
+    });
+
     try {
-      await fetch("/api/client-logout", {
-        method: "POST",
-      });
+      await Promise.race([
+        fetch("/api/client-logout", {
+          method: "POST",
+          credentials: "same-origin",
+        }),
+        timeout,
+      ]);
     } finally {
-      router.replace("/client-login");
-      router.refresh();
+      window.location.replace("/client-login?loggedOut=1");
     }
   }
 

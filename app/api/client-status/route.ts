@@ -36,6 +36,98 @@ function isFresh(timestamp?: string | null) {
   return ageMs <= twentyFourHours;
 }
 
+
+async function summarizeBagFreeStatus(app: { appId: string; name: string; path: string }) {
+  const url = process.env.BAGFREE_STATUS_URL || "https://bagfree.app/api/embr-status";
+  const key = process.env.BAGFREE_STATUS_KEY;
+
+  if (!key) {
+    return {
+      appId: app.appId,
+      name: app.name,
+      path: app.path,
+      statusLabel: "Setup Needed",
+      statusTone: "yellow",
+      dataFreshness: "Not Connected",
+      lastChecked: new Date().toISOString(),
+      liveSources: [],
+      pendingSources: ["BagFree status key"],
+      message: "BagFree status feed is not configured in Embr yet.",
+    };
+  }
+
+  try {
+    const response = await fetch(url, {
+      cache: "no-store",
+      headers: {
+        "x-embr-status-key": key,
+      },
+    });
+
+    if (!response.ok) {
+      return {
+        appId: app.appId,
+        name: app.name,
+        path: app.path,
+        statusLabel: "Error",
+        statusTone: "red",
+        dataFreshness: "Error",
+        lastChecked: new Date().toISOString(),
+        liveSources: [],
+        pendingSources: ["BagFree status feed"],
+        message: `BagFree status feed returned ${response.status}.`,
+      };
+    }
+
+    const data = await response.json();
+
+    const lastChecked = data.generatedAt || new Date().toISOString();
+    const fresh = isFresh(lastChecked);
+    const connections = data.connections || {};
+
+    const liveSources = [
+      connections.site === "live" ? "BagFree site" : null,
+      connections.netlifyFunctions === "live" ? "Netlify Functions" : null,
+      data.intelligence?.travelBrainConnected ? "Travel Brain" : null,
+      data.intelligence?.embrConnected ? "Embr API" : null,
+      connections.stripe === "configured" ? "Stripe configured" : null,
+    ].filter(Boolean);
+
+    const pendingSources =
+      Array.isArray(data.needsSetup) && data.needsSetup.length
+        ? data.needsSetup
+        : ["Users", "Payments", "Revenue", "Active-user tracking"];
+
+    return {
+      appId: app.appId,
+      name: app.name,
+      path: app.path,
+      statusLabel: "Partial Live",
+      statusTone: "yellow",
+      dataFreshness: fresh ? "Current" : "Stale",
+      lastChecked,
+      liveSources,
+      pendingSources,
+      message:
+        "BagFree is connected through Embr Travel Brain and has an operational status feed. Business reporting still needs final data sources.",
+    };
+  } catch {
+    return {
+      appId: app.appId,
+      name: app.name,
+      path: app.path,
+      statusLabel: "Error",
+      statusTone: "red",
+      dataFreshness: "Error",
+      lastChecked: new Date().toISOString(),
+      liveSources: [],
+      pendingSources: ["BagFree status feed"],
+      message: "Could not reach the BagFree operational status feed.",
+    };
+  }
+}
+
+
 function summarizeLiveApp(app: { appId: string; name: string; path: string }, data: ControlCenterPayload) {
   const business = data.business || {};
   const payments = String(data.payments || "").toLowerCase();
@@ -106,6 +198,10 @@ export async function GET() {
 
   const statuses = await Promise.all(
     apps.map(async (app) => {
+      if (app.appId === "bagfree") {
+        return summarizeBagFreeStatus(app);
+      }
+
       if (app.status !== "live") {
         return {
           appId: app.appId,
