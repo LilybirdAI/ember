@@ -13,23 +13,27 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-export const metadata = {
-  title: "Embr Core",
+export const metadata: Metadata = {
+  metadataBase: new URL("https://embrintelligence.com"),
+  title: {
+    default: "Embr Intelligence | Multi-Model Orchestration",
+    template: "%s | Embr Intelligence",
+  },
   description:
-    "Embr creates professional business apps, proposals, plans, dashboards, and project assets from plain English.",
+    "Embr Intelligence is the intelligence layer between people, AI models, and business systems—automatically selecting the right models, tools, workflows, context, and reasoning for every task.",
   openGraph: {
-    title: "Embr Core",
+    title: "Embr Intelligence | Multi-Model Orchestration",
     description:
-      "Create professional business apps, proposals, plans, dashboards, and project assets from plain English.",
-    url: "https://embrcore.com",
-    siteName: "Embr Core",
+      "The intelligence layer between people, AI models, and business systems. Embr automatically routes every task to the right intelligence, tools, context, and workflow.",
+    url: "https://embrintelligence.com",
+    siteName: "Embr Intelligence",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Embr Core",
+    title: "Embr Intelligence | Multi-Model Orchestration",
     description:
-      "Create professional business apps, proposals, plans, dashboards, and project assets from plain English.",
+      "The intelligence layer that selects the right models, tools, workflows, context, and reasoning for every task.",
   },
 };
 
