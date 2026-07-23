@@ -59,7 +59,7 @@ export default async function Home() {
   const host = headerStore.get("host") || "";
 
   if (host.startsWith("app.")) {
-    redirect("/client");
+    redirect("/client-login");
   }
 
   return (
