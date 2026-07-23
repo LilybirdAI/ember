@@ -142,19 +142,37 @@ export async function GET(
     const requests = usageApp?.requests ?? 0;
     const qualityScore = qualityApp?.averageQualityScore ?? null;
     const appName = registeredApp?.appName || usageApp?.appName || "MindShot Golf";
+    const business = mindshotSummary?.business;
+    const businessConnected = Boolean(business);
+    const paymentsStatus =
+      typeof business?.payments === "string"
+        ? business.payments
+        : "Data Pending";
+
+    const businessStatusLine = businessConnected
+      ? business?.activeUsers === "Pending" ||
+        business?.estimatedRevenue === "Pending" ||
+        paymentsStatus === "Data Pending"
+        ? "MindShot user, trial, paying user, and conversion data are connected. Active users, payments, and estimated revenue are still pending."
+        : "MindShot business metrics are connected."
+      : "User, trial, paying user, conversion, and revenue metrics still need MindShot data sources connected.";
 
     const attention = [
       `MindShot Embr usage is connected and reporting ${requests} logged request${requests === 1 ? "" : "s"}.`,
       qualityScore !== null
         ? `MindShot response quality is currently ${qualityScore}/100.`
         : "MindShot quality data is not available yet.",
-      "User, trial, paying user, conversion, and revenue metrics still need MindShot data sources connected.",
+      businessStatusLine,
     ];
+
+    const connectedBusinessSummary = businessConnected
+      ? `Business data is connected with ${business?.totalUsers ?? 0} total users, ${business?.trialUsers ?? 0} trial users, ${business?.payingUsers ?? 0} paying users, and ${business?.conversion ?? "0%"} conversion. Active users, payments, and estimated revenue are still pending.`
+      : "Business metrics are pending until MindShot user and subscription data sources are connected.";
 
     const monthlySummary =
       qualityScore !== null
-        ? `MindShot has live Embr system health, registered app data, usage data, and quality data connected. Embr has logged ${requests} request${requests === 1 ? "" : "s"} for MindShot with a current quality score of ${qualityScore}/100. Business metrics are pending until MindShot user and subscription data sources are connected.`
-        : "MindShot has live Embr system health and usage data connected. Business metrics are pending until MindShot user and subscription data sources are connected.";
+        ? `MindShot has live Embr system health, registered app data, usage data, and quality data connected. Embr has logged ${requests} request${requests === 1 ? "" : "s"} for MindShot with a current quality score of ${qualityScore}/100. ${connectedBusinessSummary}`
+        : `MindShot has live Embr system health and usage data connected. ${connectedBusinessSummary}`;
 
     return NextResponse.json({
       app: {
@@ -162,7 +180,7 @@ export async function GET(
         name: appName,
         status: isHealthy ? "Healthy" : "Needs Attention",
         backend: isHealthy ? "Online" : "Offline",
-        payments: "Data Pending",
+        payments: paymentsStatus,
         embr: isHealthy ? "Active" : "Needs Attention",
         lastChecked: system.time || new Date().toISOString(),
         dataMode: "live-system-status",
